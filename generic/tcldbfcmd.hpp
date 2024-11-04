@@ -2,6 +2,7 @@
 #define TCLDBFCMD_H
 
 #include <tcl.h>
+/*#include <shapefil.h>*/
 #include "tclcmd.hpp"
 
 class TclDbfCmd : public TclCmd {

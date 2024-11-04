@@ -1,4 +1,4 @@
-#include <iostream>
+#include <string.h>
 #include "tcldbfcmd.hpp"
 
 #if defined(TCLDBFCMD_DEBUG)
@@ -8,21 +8,27 @@
 #   define DEBUGLOG(_x_)
 #endif
 
+/*
+  dbf d -open|open $input_file [-readonly]
+    opens dbase file, returns a handle.
+  dbf d -create|create $input_file [-codepage $codepage]
+    creates dbase file, returns a handle
+*/
+
 int TclDbfCmd::Command(int objc, Tcl_Obj * const objv[]) {
   DEBUGLOG("TclDbfCmd::Command *" << this);
 
-  Tcl_Obj * result = Tcl_GetObjResult(tclInterp);
-
-  Tcl_AppendToObj(result, "Hello,", -1);
-  if (objc > 1) {
-    for (int i = 1; i < objc; i++) {
-      Tcl_AppendToObj(result, " ", -1);
-      Tcl_AppendObjToObj(result, objv[i]);
-    }
-  } else {
-     Tcl_AppendToObj(result, " World", -1);
+  if (objc < 4) {
+    Tcl_WrongNumArgs(tclInterp, 1, objv, "<varname> -create|-open <filename> ?option?");
+    return TCL_ERROR;
   }
-  Tcl_AppendToObj(result, "!", -1);
+  char *filename = Tcl_GetString(objv[3]);
+
+  if (strcmp(Tcl_GetString(objv[2]), "-create") == 0) {
+
+  } else if (strcmp(Tcl_GetString(objv[2]), "-open") == 0) {
+  
+  }
 
   return TCL_OK;
 };

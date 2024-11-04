@@ -2,12 +2,8 @@ package require tcldbf 2
 package require tcltest
 namespace import ::tcltest::*
 
-test hello-1.0 {hello} {
+test dbf-1.0 {usage} -body {
    dbf
-} {Hello, World!}
-
-test hello-1.1 {hello tcl} {
-   dbf Tcl
-} {Hello, Tcl!}
+} -returnCodes 1 -result {wrong # args: should be "dbf <varname> -create|-open <filename> ?option?"}
 
 cleanupTests
