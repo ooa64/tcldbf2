@@ -1,0 +1,13 @@
+package require tcldbf 2
+package require tcltest
+namespace import ::tcltest::*
+
+test hello-1.0 {hello} {
+   dbf
+} {Hello, World!}
+
+test hello-1.1 {hello tcl} {
+   dbf Tcl
+} {Hello, Tcl!}
+
+cleanupTests
