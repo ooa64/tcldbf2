@@ -2,8 +2,27 @@ package require tcldbf 2
 package require tcltest
 namespace import ::tcltest::*
 
-test dbf-1.0 {usage} -body {
+test dbf-1.0 {usage} -returnCodes 1 -body {
    dbf
-} -returnCodes 1 -result {wrong # args: should be "dbf <varname> -create|-open <filename> ?option?"}
+} -result {wrong # args: should be "dbf <varname> create|open <filename> ?option?"}
 
+test dbf-2.0 {create} -cleanup {
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   dbf d create [file join [temporaryDirectory] test.dbf]
+   $d forget
+   list $d [info commands $d]
+} -result {dbf.???? {}} -match glob
+
+test dbf-3.0 {create} -setup {
+   dbf d create [file join [temporaryDirectory] test.dbf]
+   $d forget
+} -cleanup {
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   dbf d open [file join [temporaryDirectory] test.dbf]
+   $d forget
+   list $d [info commands $d]
+} -result {dbf.???? {}} -match glob
+   
 cleanupTests
