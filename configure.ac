@@ -71,9 +71,10 @@ TEA_SETUP_COMPILER
 # and PKG_TCL_SOURCES.
 #-----------------------------------------------------------------------
 
-TEA_ADD_SOURCES([tcldbf.cpp tcldbfcmd.cpp tclcmd.cpp])
+TEA_ADD_SOURCES([tcldbf.cpp tcldbfcmd.cpp tclcmd.cpp tcldbfobjectcmd.cpp])
+TEA_ADD_SOURCES([shapelib/dbfopen.c shapelib/safileio.c])
+TEA_ADD_INCLUDES([-I${srcdir}/shapelib])
 TEA_ADD_HEADERS([])
-TEA_ADD_INCLUDES([])
 TEA_ADD_LIBS([-Wl,--no-undefined -lstdc++])
 TEA_ADD_CFLAGS([])
 TEA_ADD_STUB_SOURCES([])

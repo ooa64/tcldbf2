@@ -3,13 +3,6 @@
 
 #include <tcl.h>
 
-#if defined(TCLCMD_DEBUG)
-#   include <iostream>
-#   define DEBUGLOG(_x_) (std::cerr << "DEBUG: " << _x_ << "\n")
-#else
-#   define DEBUGLOG(_x_)
-#endif
-
 #if TCL_MAJOR_VERSION == 8 && TCL_MINOR_VERSION == 0
 #   define Tcl_GetString(a) \
            Tcl_GetStringFromObj(a,NULL)

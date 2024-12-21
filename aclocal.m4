@@ -15,7 +15,7 @@ AC_DEFUN([TCLDBF_SETUP_DEBUGLOG], [
 	    [build with debug printing (default: off)]),
 	[tcl_ok=$enableval], [tcl_ok=no])
     if test "$tcl_ok" = "yes"; then
-	CFLAGS_DEBUGLOG="-DTCLCMD_DEBUG -DTCLDBF_DEBUG  -DTCLDBFCMD_DEBUG"
+	CFLAGS_DEBUGLOG="-DTCLCMD_DEBUG -DTCLDBF_DEBUG -DTCLDBFCMD_DEBUG -DTCLDBFOBJECTCMD_DEBUG"
 	AC_MSG_RESULT([yes])
     else
 	CFLAGS_DEBUGLOG=""

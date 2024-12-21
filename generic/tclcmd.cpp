@@ -30,6 +30,7 @@ TclCmd::TclCmd(Tcl_Interp * interp, const char * name, TclCmd * parent) {
 
 TclCmd::~TclCmd() {
   DEBUGLOG("TclCmd::Destruct *" << this);
+  while (pChildren) delete pChildren;
   SetParent(NULL);
   Rename(NULL, NULL);
 }
