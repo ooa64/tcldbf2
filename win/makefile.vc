@@ -19,6 +19,8 @@
 # The name of the package
 PROJECT = tcldbf
 
+SHAPELIBDIR = ../shapelib
+
 !include "rules-ext.vc"
 
 # Define the object files and resource file that make up the extension.
@@ -28,10 +30,14 @@ PROJECT = tcldbf
 PRJ_OBJS = \
 	$(TMP_DIR)\tclcmd.obj \
 	$(TMP_DIR)\tcldbfcmd.obj \
-	$(TMP_DIR)\tcldbf.obj
+	$(TMP_DIR)\tcldbfobjectcmd.obj \
+	$(TMP_DIR)\tcldbf.obj \
+	$(TMP_DIR)\dbfopen.obj \
+	$(TMP_DIR)\safileio.obj
 
 # Define any additional compiler flags that might be required for the project
 PRJ_DEFINES = -D_CRT_SECURE_NO_DEPRECATE
+PRJ_INCLUDES = -I$(SHAPELIBDIR)
 
 # Define the standard targets
 !include "$(_RULESDIR)\targets.vc"
@@ -55,6 +61,7 @@ $(TMP_DIR)\tcldbfUuid.h:	$(ROOT)\manifest.uuid
 install: default-install-docs-n
 
 # Explicit dependency rules
+
 $(GENERICDIR)\tcldbf.cpp : $(GENERICDIR)\tcldbfcmd.hpp $(TMP_DIR)\tcldbfUuid.h
 
 $(GENERICDIR)\tcldbfcmd.cpp : $(GENERICDIR)\tcldbfcmd.hpp $(GENERICDIR)\tclcmd.hpp
@@ -64,5 +71,10 @@ $(GENERICDIR)\tcldbfcmd.cpp : $(GENERICDIR)\tcldbfcmd.hpp $(GENERICDIR)\tclcmd.h
 $<
 <<
 
+{$(SHAPELIBDIR)}.c{$(TMP_DIR)}.obj::
+	$(CCPKGCMD) @<<
+$<
+<<
+
 .SUFFIXES:
-.SUFFIXES:.cpp .rc
+.SUFFIXES:.c .cpp .rc
