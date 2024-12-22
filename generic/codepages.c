@@ -2,8 +2,8 @@
 
 static const char * codepages[] = {
 	NULL,
-	"cp437", /* 1 - US MS-DOS */
-	"cp850", /* 2 - International MS-DOS */
+	"cp437",  /* 1 - US MS-DOS */
+	"cp850",  /* 2 - International MS-DOS */
 	"cp1252", /* 3 - Windows ANSI Latin I */
 	"macCentEuro", /* 4 - Standard Macintosh */
 	NULL,NULL,NULL,
@@ -36,7 +36,7 @@ static const char * codepages[] = {
 	"cp852", /* 35 - Polish OEM */
 	"cp860", /* 36 - Portuguese OEM */
 	"cp850", /* 37 - Portuguese OEM* */
-	"cp866", /* 38 - Russian OEM */
+	"cp866", /* 38 - Cyrillic OEM */
 	NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
 	"cp850", /* 55 - English OEM (US)* */
 	NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
@@ -47,12 +47,12 @@ static const char * codepages[] = {
 	"cp950", /* 79 - Chinese Big5 (Taiwan) */
 	"cp874", /* 80 - Thai (ANSI/OEM) */
 	NULL,NULL,NULL,NULL,NULL,NULL,
-	NULL, /* 87 - Current ANSI CP ANSI */
+	NULL,     /* 87 - Current ANSI CP ANSI */
 	"cp1252", /* 88 - Western European ANSI */
 	"cp1252", /* 89 - Spanish ANSI */
 	NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
 	"cp852", /* 100 - Eastern European MS-DOS */
-	"cp866", /* 101 - Russian MS-DOS */
+	"cp866", /* 101 - Cyrillic MS-DOS */
 	"cp865", /* 102 - Nordic MS-DOS */
 	"cp861", /* 103 - Icelandic MS-DOS */
 	"cp850", /* 104 - Kamenicky (Czech) MS-DOS 895 */
@@ -71,14 +71,14 @@ static const char * codepages[] = {
 	"cp852", /* 135 - Slovenian OEM */
 	"cp857", /* 136 - Turkish OEM */
 	NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
-	"macCyrillic", /* 150 - Russian Macintosh */
+	"macCyrillic", /* 150 - Cyrillic Macintosh */
 	"macCentEuro", /* 151 - Eastern European Macintosh */
-	"macGreek", /* 152 - Greek Macintosh */
+	"macGreek",    /* 152 - Greek Macintosh */
 	NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
 	NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
 	NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
 	"cp1250", /* 200 - Eastern European Windows */
-	"cp1251", /* 201 - Russian Windows */
+	"cp1251", /* 201 - Cyrillic Windows */
 	"cp1254", /* 202 - Turkish Windows */
 	"cp1253", /* 203 - Greek Windows */
 	"cp1257", /* 204 - Baltic Windows */
@@ -89,11 +89,11 @@ static const char * codepages[] = {
 };
 
 static const char *codepage_encoding (char *codepage) {
-	int result = 0; 
+    int result = 0; 
     if (codepage && strncmp(codepage,"LDID/",5) == 0) {
         result = atoi(codepage + 5);
         if (result < 0 || result > 255)
-        	result = 0;
+            result = 0;
     };
     return codepages[result];
 };

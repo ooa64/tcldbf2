@@ -74,8 +74,8 @@ int TclDbfCmd::Command(int objc, Tcl_Obj * const objv[]) {
     goto exit;
   }
 
-  char cmdname[10];
-  sprintf(cmdname, "dbf.%04X", dbfcounter++);
+  char cmdname[9];
+  snprintf(cmdname, sizeof(cmdname), "dbf.%04X", dbfcounter++);
   (void) new TclDbfObjectCmd(tclInterp, cmdname, this, dbf);
 
 	Tcl_SetVar2(tclInterp, varname, NULL, cmdname, 0);
