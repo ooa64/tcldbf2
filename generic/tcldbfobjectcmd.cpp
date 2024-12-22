@@ -87,7 +87,7 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
       Tcl_WrongNumArgs(tclInterp, 0, objv, "<object> codepage");
       return TCL_ERROR;
     } else {
-			Tcl_SetObjResult (tclInterp, Tcl_NewStringObj(DBFGetCodePage(dbf), -1));
+      Tcl_SetObjResult (tclInterp, Tcl_NewStringObj(DBFGetCodePage(dbf), -1));
     }
 
     break;
@@ -207,8 +207,8 @@ int TclDbfObjectCmd::AddField(Tcl_Obj * labelObj, Tcl_Obj * typeObj, Tcl_Obj * w
 int TclDbfObjectCmd::GetField(Tcl_Obj * fieldObj, int index) {
   int width, prec;
   char label [XBASE_FLDNAME_LEN_READ+1];
-  DBFFieldType type = DBFGetFieldInfo(dbf, index, label, &width, &prec);
   char nativetype = DBFGetNativeFieldType(dbf, index);
+  DBFFieldType type = DBFGetFieldInfo(dbf, index, label, &width, &prec);
 
   Tcl_ListObjAppendElement(NULL, fieldObj, Tcl_NewStringObj(EncodeTclString(label), -1));
   Tcl_ListObjAppendElement(NULL, fieldObj, Tcl_NewStringObj(type_of(type), -11));
