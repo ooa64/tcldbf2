@@ -39,6 +39,9 @@ private:
     return Tcl_DStringValue(&dstring);
   };
 
+  int AddField(Tcl_Obj * labelObj, Tcl_Obj * typeObj, Tcl_Obj * widthObj, Tcl_Obj * precObj);
+  int GetField(Tcl_Obj * fieldObj, int index);
+
   virtual int Command(int objc, Tcl_Obj * const objv[]);
   virtual void Cleanup();
 };

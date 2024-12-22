@@ -33,11 +33,33 @@ test dbf-3.0 {create/open} -setup {
    list $d [info commands $d]
 } -result {dbf.???? {}} -match glob
 
-test dbf-3.1 {create/setup} -setup {
+test dbf-3.1.0 {create/open/codepage default} -setup {
+   dbf d create [file join [temporaryDirectory] test.dbf]
+   $d forget
+   dbf d open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   $d codepage
+} -result {LDID/87}
+
+test dbf-3.1.1 {create/open/codepage custom} -setup {
+   dbf d create [file join [temporaryDirectory] test.dbf] -codepage "LDID/201"
+   $d forget
+   dbf d open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   $d codepage
+} -result {LDID/201}
+
+test dbf-3.2.0 {create/setup} -setup {
    dbf d create [file join [temporaryDirectory] test.dbf]
 } -cleanup {
    $d forget
-   #catch {file delete [file join [temporaryDirectory] test.dbf]}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
 } -body {
    list \
          [$d add F1 L 1] \
@@ -46,5 +68,58 @@ test dbf-3.1 {create/setup} -setup {
          [$d add F4 N 10] \
          [$d add F5 N 10 2]
 } -result {0 1 2 3 4}
+
+test dbf-3.2.1 {create/setup/open/field} -setup {
+   dbf d create [file join [temporaryDirectory] test.dbf]
+   $d add F1 L 1
+   $d add F2 D 8
+   $d add F3 C 10 
+   $d add F4 N 10 
+   $d add F5 N 10 2
+   $d forget
+   dbf d open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   list \
+      [$d field F1] \
+      [$d field F2] \
+      [$d field F3] \
+      [$d field F4] \
+      [$d field F5]
+} -result {{F1 Logical L 1 0} {F2 Date D 8 0} {F3 String C 10 0} {F4 Double N 10 0} {F5 Double N 10 2}}
+
+test dbf-3.2.2 {create/setup/open/fields} -setup {
+   dbf d create [file join [temporaryDirectory] test.dbf]
+   $d add F1 L 1
+   $d add F2 D 8
+   $d add F3 C 10 
+   $d add F4 N 10 
+   $d add F5 N 10 2
+   $d forget
+   dbf d open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   $d fields
+} -result {{F1 Logical L 1 0} {F2 Date D 8 0} {F3 String C 10 0} {F4 Double N 10 0} {F5 Double N 10 2}}
+
+test dbf-3.2.3 {create/setup/open/info} -setup {
+   dbf d create [file join [temporaryDirectory] test.dbf]
+   $d add F1 L 1
+   $d add F2 D 8
+   $d add F3 C 10 
+   $d add F4 N 10 
+   $d add F5 N 10 2
+   $d forget
+   dbf d open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   $d info
+} -result {0 5}
 
 cleanupTests

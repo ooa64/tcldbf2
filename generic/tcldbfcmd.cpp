@@ -31,21 +31,21 @@ int TclDbfCmd::Command(int objc, Tcl_Obj * const objv[]) {
   Tcl_DStringInit(&s);
   Tcl_DStringInit(&e);
 
-	char *varname = Tcl_GetString(objv[1]);
-  char *filename = Tcl_UtfToExternalDString(NULL, 
+  char * varname = Tcl_GetString(objv[1]);
+  char * filename = Tcl_UtfToExternalDString(NULL,
       Tcl_TranslateFileName(tclInterp, Tcl_GetString(objv[3]), &s), -1, &e);
 
   if (strcmp(Tcl_GetString(objv[2]), "create") == 0 ||
       strcmp(Tcl_GetString(objv[2]), "-create") == 0) {
 
-    const char *codepage = "LDID/87"; /* 87 - ANSI */
-    if (objc == 6 && strcmp(Tcl_GetString(objv[4]), "-codepage")) {
-			codepage = Tcl_GetString(objv[5]);
+    const char * codepage = "LDID/87"; /* 87 - ANSI */
+    if (objc == 6 && strcmp(Tcl_GetString(objv[4]), "-codepage") == 0) {
+      codepage = Tcl_GetString(objv[5]);
     } else if (objc > 4) {
       Tcl_WrongNumArgs(tclInterp, 1, objv, "<varname> create <filename> ?-codepage <codepage>?");
-      goto exit;      
+      goto exit;
     }
-    
+
     dbf = DBFCreateEx(filename, codepage);
     if (dbf == NULL) {
       Tcl_AppendResult(tclInterp, "create ", Tcl_GetString(objv[3]), " failed", NULL);
@@ -54,8 +54,8 @@ int TclDbfCmd::Command(int objc, Tcl_Obj * const objv[]) {
 
   } else if (strcmp(Tcl_GetString(objv[2]), "open") == 0 ||
         strcmp(Tcl_GetString(objv[2]), "-open") == 0) {
-    
-    const char *openmode = "rb+";
+
+    const char * openmode = "rb+";
     if (objc == 5 && strcmp(Tcl_GetString(objv[4]), "-readonly")) {
       openmode = "rb";
     } else if (objc > 4) {
@@ -78,8 +78,8 @@ int TclDbfCmd::Command(int objc, Tcl_Obj * const objv[]) {
   snprintf(cmdname, sizeof(cmdname), "dbf.%04X", dbfcounter++);
   (void) new TclDbfObjectCmd(tclInterp, cmdname, this, dbf);
 
-	Tcl_SetVar2(tclInterp, varname, NULL, cmdname, 0);
-	Tcl_SetResult(tclInterp, cmdname, NULL);
+  Tcl_SetVar2(tclInterp, varname, NULL, cmdname, 0);
+  Tcl_SetResult(tclInterp, cmdname, NULL);
   result = TCL_OK;
 
 exit:
@@ -87,7 +87,7 @@ exit:
   Tcl_DStringFree(&s);
   // v.1 compatibility
   if (Tcl_GetString(objv[2])[0] == '-') {
-    Tcl_SetResult(tclInterp,(char *)(result == TCL_OK ? "1" : "0"), NULL); 
+    Tcl_SetResult(tclInterp,(char *)(result == TCL_OK ? "1" : "0"), NULL);
     return TCL_OK;
   }
   return result;

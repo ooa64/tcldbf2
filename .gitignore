@@ -44,3 +44,12 @@ win/Release_*
 *.dbt
 *.ndx
 *.ntx
+
+# configure
+autom4te.cache
+config.status
+config.log
+Makefile
+pkgIndex.tcl
+
+tmp	 
