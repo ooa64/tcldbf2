@@ -38,6 +38,9 @@
 # Windows build directories
 win/Debug_*
 win/Release_*
+win/*.bat
+win/*.log
+win/versions.vc
 
 # Database
 *.dbf
@@ -52,4 +55,5 @@ config.log
 Makefile
 pkgIndex.tcl
 
-tmp	 
+*.bak
+tmp
