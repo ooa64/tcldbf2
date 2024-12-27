@@ -41,9 +41,11 @@ private:
 
   int AddField(Tcl_Obj * labelObj, Tcl_Obj * typeObj, Tcl_Obj * widthObj, Tcl_Obj * precObj);
   int GetField(Tcl_Obj * fieldObj, int index);
+  int SetFieldValue(int rowid, int index, Tcl_Obj * valueObj);
+  int GetFieldValue(int rowid, int index, Tcl_Obj ** valueObj);
+  int GetRowid(Tcl_Obj * rowidObj, int * rowid);
 
   virtual int Command(int objc, Tcl_Obj * const objv[]);
-  virtual void Cleanup();
 };
 
 #endif

@@ -11,7 +11,6 @@ public:
 private:
   int dbfcounter = 0;
   virtual int Command(int objc, Tcl_Obj * const objv[]);
-  virtual void Cleanup();
 };
 
 #endif

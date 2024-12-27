@@ -18,12 +18,13 @@ static const char *type_of (DBFFieldType field_type) {
 	return "Unknown";
 }
 
-static DBFFieldType get_type (const char *type_name) {
+static DBFFieldType get_type (const char *type_name, int width, int prec) {
 	if (type_name && *type_name) {
 		if (type_name[1] == '\0') {
 			switch (type_name[0]) {  
 			case 'C': return FTString;
-			case 'N': return FTDouble;
+			case 'N':
+			case 'F': return (prec > 0 || width >= 10) ? FTDouble : FTInteger;
 			case 'L': return FTLogical;
 			case 'D': return FTDate;
 			}
@@ -36,6 +37,15 @@ static DBFFieldType get_type (const char *type_name) {
 		}
 	}
 	return FTInvalid;
+}
+
+static SHPDate *get_date (SHPDate *date, char *str) {
+    if (3 != sscanf(str,"%4d%2d%2d",&date->year,&date->month,&date->day)) {
+        date->year = 0;
+        date->month = 0;
+        date->day = 0;
+    }
+    return date;	
 }
 
 static int valid_name (const char *field_name) {
