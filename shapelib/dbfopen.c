@@ -169,7 +169,7 @@ static bool DBFFlushRecord(DBFHandle psDBF)
                     szMessage, sizeof(szMessage),
                     "Failure seeking to position before writing DBF record %d.",
                     psDBF->nCurrentRecord);
-                psDBF->sHooks.Error(szMessage);
+                psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
                 return false;
             }
         }
@@ -180,7 +180,7 @@ static bool DBFFlushRecord(DBFHandle psDBF)
             char szMessage[128];
             snprintf(szMessage, sizeof(szMessage),
                      "Failure writing DBF record %d.", psDBF->nCurrentRecord);
-            psDBF->sHooks.Error(szMessage);
+            psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
             return false;
         }
 
@@ -223,7 +223,7 @@ static bool DBFLoadRecord(DBFHandle psDBF, int iRecord)
             snprintf(szMessage, sizeof(szMessage),
                      "fseek(%ld) failed on DBF file.",
                      STATIC_CAST(long, nRecordOffset));
-            psDBF->sHooks.Error(szMessage);
+            psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
             return false;
         }
 
@@ -233,7 +233,7 @@ static bool DBFLoadRecord(DBFHandle psDBF, int iRecord)
             char szMessage[128];
             snprintf(szMessage, sizeof(szMessage),
                      "fread(%d) failed on DBF file.", psDBF->nRecordLength);
-            psDBF->sHooks.Error(szMessage);
+            psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
             return false;
         }
 
@@ -828,7 +828,7 @@ int SHPAPI_CALL DBFAddNativeFieldType(DBFHandle psDBF, const char *pszFieldName,
                  "Cannot add field %s. Header length limit reached "
                  "(max 65535 bytes, 2046 fields).",
                  pszFieldName);
-        psDBF->sHooks.Error(szMessage);
+        psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
         return -1;
     }
 
@@ -848,7 +848,7 @@ int SHPAPI_CALL DBFAddNativeFieldType(DBFHandle psDBF, const char *pszFieldName,
                  "Cannot add field %s. Record length limit reached "
                  "(max 65535 bytes).",
                  pszFieldName);
-        psDBF->sHooks.Error(szMessage);
+        psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
         return -1;
     }
 
@@ -903,7 +903,7 @@ int SHPAPI_CALL DBFAddNativeFieldType(DBFHandle psDBF, const char *pszFieldName,
     if (!panFieldOffsetNew || !panFieldSizeNew || !panFieldDecimalsNew ||
         !pachFieldTypeNew || !pszHeaderNew || !pszCurrentRecordNew)
     {
-        psDBF->sHooks.Error("Out of memory");
+        psDBF->sHooks.Error("Out of memory", psDBF->sHooks.pvUserData);
         return -1;
     }
 
@@ -914,7 +914,7 @@ int SHPAPI_CALL DBFAddNativeFieldType(DBFHandle psDBF, const char *pszFieldName,
         pszRecord = STATIC_CAST(char *, malloc(psDBF->nRecordLength + nWidth));
         if (!pszRecord)
         {
-            psDBF->sHooks.Error("Out of memory");
+            psDBF->sHooks.Error("Out of memory", psDBF->sHooks.pvUserData);
             return -1;
         }
     }
@@ -2071,7 +2071,7 @@ int SHPAPI_CALL DBFReorderFields(DBFHandle psDBF, const int *panMap)
         free(pszHeaderNew);
         free(pszRecord);
         free(pszRecordNew);
-        psDBF->sHooks.Error("Out of memory");
+        psDBF->sHooks.Error("Out of memory", psDBF->sHooks.pvUserData);
         return FALSE;
     }
 

@@ -39,15 +39,6 @@ static DBFFieldType get_type (const char *type_name, int width, int prec) {
 	return FTInvalid;
 }
 
-static SHPDate *get_date (SHPDate *date, char *str) {
-    if (3 != sscanf(str,"%4d%2d%2d",&date->year,&date->month,&date->day)) {
-        date->year = 0;
-        date->month = 0;
-        date->day = 0;
-    }
-    return date;	
-}
-
 static int valid_name (const char *field_name) {
 	if (strlen(field_name) > 10)
 		return 0;

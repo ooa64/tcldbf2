@@ -2,6 +2,7 @@
 #include "tcldbfobjectcmd.hpp"
 
 #include "dbffield.c"
+#include "codepages.c"
 
 #if defined(TCLDBFOBJECTCMD_DEBUG)
 #   include <iostream>
@@ -42,6 +43,32 @@
   $d forget
         closes dbase file
 */
+
+static void TclDbfError(const char *message, void *pvUserData)
+{
+  DEBUGLOG("TclDbfError " << message << " " << pvUserData);
+  if (pvUserData) {
+    ((TclDbfObjectCmd *)pvUserData)->SetLastError(message);
+  }
+}
+
+TclDbfObjectCmd::TclDbfObjectCmd(Tcl_Interp * interp, const char * name, TclCmd * parent,
+    DBFHandle handle): TclCmd(interp, name, parent) {
+  Tcl_DStringInit(&dstring);
+  Tcl_DStringInit(&message);
+  encoding = Tcl_GetEncoding(NULL, codepage_encoding(handle->pszCodePage));    
+  dbf = handle;
+  dbf->sHooks.Error = TclDbfError; 
+  dbf->sHooks.pvUserData = this;
+} 
+
+TclDbfObjectCmd::~TclDbfObjectCmd() {
+  dbf->sHooks.pvUserData = NULL;
+  DBFClose(dbf);
+  Tcl_FreeEncoding(encoding);
+  Tcl_DStringFree(&message);
+  Tcl_DStringFree(&dstring);
+};
 
 int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
   static const char *commands[] = {
@@ -161,7 +188,7 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
 
       int fcount = DBFGetFieldCount(dbf);
       if (objc > (fcount + 3)) {
-        Tcl_SetResult(tclInterp, "too many values", NULL);
+        Tcl_SetResult(tclInterp, (char *)"too many values", NULL);
         return TCL_ERROR;
       }
       int rowid;
@@ -172,6 +199,10 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
         if (SetFieldValue(rowid, i - 3, objv[i]) == TCL_ERROR) {
           return TCL_ERROR;
         }
+      }
+      DBFUpdateHeader(dbf);
+      if (CheckLastError() == TCL_ERROR) {
+        return TCL_ERROR;
       }
       Tcl_SetObjResult(tclInterp, Tcl_NewIntObj(rowid));
     }
@@ -317,7 +348,7 @@ int TclDbfObjectCmd::GetRowid(Tcl_Obj * rowidObj, int * rowid) {
   if (strcmp(Tcl_GetString(rowidObj), "end") == 0) {
     *rowid = rcount;
   } else if (Tcl_GetIntFromObj(tclInterp, rowidObj, rowid) == TCL_ERROR || *rowid < 0 || *rowid > rcount) {
-    Tcl_SetResult(tclInterp, "invalid rowid", NULL);
+    Tcl_AppendResult(tclInterp, "invalid rowid ", Tcl_GetString(rowidObj), NULL);
     return TCL_ERROR;
   }
   return TCL_OK;
@@ -326,34 +357,35 @@ int TclDbfObjectCmd::GetRowid(Tcl_Obj * rowidObj, int * rowid) {
 int TclDbfObjectCmd::AddField(Tcl_Obj * labelObj, Tcl_Obj * typeObj, Tcl_Obj * widthObj, Tcl_Obj * precObj) {
   char *label = Tcl_GetString(labelObj);
   if (!valid_name(label)) {
-    Tcl_AppendResult(tclInterp, (char *)"invalid name, field ", label, NULL);
+    Tcl_AppendResult(tclInterp, "invalid name, field ", label, NULL);
     return TCL_ERROR;
   }
 
   int width = 0;
   if (Tcl_GetIntFromObj(tclInterp, widthObj, &width) == TCL_ERROR || width < 1 || width > 255) {
-    Tcl_AppendResult(tclInterp, (char *)"invalid width, field ", label, NULL);
+    Tcl_AppendResult(tclInterp, "invalid width, field ", label, NULL);
     return TCL_ERROR;
   }
 
   int prec  = 0;
   if (precObj) {
     if (Tcl_GetIntFromObj(tclInterp, precObj, &prec) == TCL_ERROR || prec > width) {
-      Tcl_AppendResult(tclInterp, (char *)"invalid precision, field ", label, NULL);
+      Tcl_AppendResult(tclInterp, "invalid precision, field ", label, NULL);
       return TCL_ERROR;
     }
   }
 
   DBFFieldType type = get_type(Tcl_GetString(typeObj), width, prec);
   if (type == FTInvalid) {
-    Tcl_AppendResult(tclInterp, (char *)"invalid type, field ", label, NULL);
+    Tcl_AppendResult(tclInterp, "invalid type, field ", label, NULL);
     return TCL_ERROR;
   }
 
   int i = DBFAddField(dbf, label, type, width, prec);
   if (i < 0) {
-    // TODO: add engine error message
-    Tcl_AppendResult(tclInterp, (char *)"could not add field ", label, NULL);
+    if (CheckLastError() != TCL_ERROR) {
+      Tcl_AppendResult(tclInterp, "cannot add field ", label, NULL);
+    }
     return TCL_ERROR;
   }
 

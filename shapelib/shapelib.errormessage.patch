@@ -1,0 +1,110 @@
+diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
+--- ./shapelib-orig/dbfopen.c	2024-12-21 14:33:34.041000000 +0200
++++ ./shapelib/dbfopen.c	2024-12-28 18:23:02.997782220 +0200
+@@ -169,7 +169,7 @@
+                     szMessage, sizeof(szMessage),
+                     "Failure seeking to position before writing DBF record %d.",
+                     psDBF->nCurrentRecord);
+-                psDBF->sHooks.Error(szMessage);
++                psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
+                 return false;
+             }
+         }
+@@ -180,7 +180,7 @@
+             char szMessage[128];
+             snprintf(szMessage, sizeof(szMessage),
+                      "Failure writing DBF record %d.", psDBF->nCurrentRecord);
+-            psDBF->sHooks.Error(szMessage);
++            psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
+             return false;
+         }
+ 
+@@ -223,7 +223,7 @@
+             snprintf(szMessage, sizeof(szMessage),
+                      "fseek(%ld) failed on DBF file.",
+                      STATIC_CAST(long, nRecordOffset));
+-            psDBF->sHooks.Error(szMessage);
++            psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
+             return false;
+         }
+ 
+@@ -233,7 +233,7 @@
+             char szMessage[128];
+             snprintf(szMessage, sizeof(szMessage),
+                      "fread(%d) failed on DBF file.", psDBF->nRecordLength);
+-            psDBF->sHooks.Error(szMessage);
++            psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
+             return false;
+         }
+ 
+@@ -828,7 +828,7 @@
+                  "Cannot add field %s. Header length limit reached "
+                  "(max 65535 bytes, 2046 fields).",
+                  pszFieldName);
+-        psDBF->sHooks.Error(szMessage);
++        psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
+         return -1;
+     }
+ 
+@@ -848,7 +848,7 @@
+                  "Cannot add field %s. Record length limit reached "
+                  "(max 65535 bytes).",
+                  pszFieldName);
+-        psDBF->sHooks.Error(szMessage);
++        psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
+         return -1;
+     }
+ 
+@@ -903,7 +903,7 @@
+     if (!panFieldOffsetNew || !panFieldSizeNew || !panFieldDecimalsNew ||
+         !pachFieldTypeNew || !pszHeaderNew || !pszCurrentRecordNew)
+     {
+-        psDBF->sHooks.Error("Out of memory");
++        psDBF->sHooks.Error("Out of memory", psDBF->sHooks.pvUserData);
+         return -1;
+     }
+ 
+@@ -914,7 +914,7 @@
+         pszRecord = STATIC_CAST(char *, malloc(psDBF->nRecordLength + nWidth));
+         if (!pszRecord)
+         {
+-            psDBF->sHooks.Error("Out of memory");
++            psDBF->sHooks.Error("Out of memory", psDBF->sHooks.pvUserData);
+             return -1;
+         }
+     }
+@@ -2071,7 +2071,7 @@
+         free(pszHeaderNew);
+         free(pszRecord);
+         free(pszRecordNew);
+-        psDBF->sHooks.Error("Out of memory");
++        psDBF->sHooks.Error("Out of memory", psDBF->sHooks.pvUserData);
+         return FALSE;
+     }
+ 
+diff -bur ./shapelib-orig/safileio.c ./shapelib/safileio.c
+--- ./shapelib-orig/safileio.c	2024-12-21 14:33:34.041000000 +0200
++++ ./shapelib/safileio.c	2024-12-28 18:12:42.089764324 +0200
+@@ -83,8 +83,9 @@
+     return remove(filename);
+ }
+ 
+-static void SADError(const char *message)
++static void SADError(const char *message, void *pvUserData)
+ {
++    (void)pvUserData;
+     fprintf(stderr, "%s\n", message);
+ }
+ 
+diff -bur ./shapelib-orig/shapefil.h ./shapelib/shapefil.h
+--- ./shapelib-orig/shapefil.h	2024-12-21 14:33:34.041000000 +0200
++++ ./shapelib/shapefil.h	2024-12-28 18:13:30.381765716 +0200
+@@ -146,7 +146,7 @@
+         int (*FClose)(SAFile file);
+         int (*Remove)(const char *filename, void *pvUserData);
+ 
+-        void (*Error)(const char *message);
++        void (*Error)(const char *message, void *pvUserData);
+         double (*Atof)(const char *str);
+         void *pvUserData;
+     } SAHooks;

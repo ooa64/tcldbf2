@@ -2,7 +2,6 @@ package require tcldbf
 package require tcltest
 namespace import ::tcltest::*
 
-
 ###
 
 set simple_struct {
@@ -161,7 +160,7 @@ test dbf-3.2.0.2 {create/setup error} -returnCodes 1 -setup {
    for {set i 0} {$i <= 256} {incr i} {
       $d add S$i C 255
    }
-} -result {could not add field S256}
+} -result {Cannot add field S256. Record length limit reached (max 65535 bytes).}
 
 test dbf-3.2.1 {create/setup} -setup {
    dbf d create [file join [temporaryDirectory] test.dbf]
@@ -220,7 +219,7 @@ test dbf-4.0.0 {create/setup/open/insert past end} -returnCodes 1 -setup {
    catch {file delete [file join [temporaryDirectory] test.dbf]}
 } -body {
    $d insert 1 {foo}
-} -result {invalid rowid}
+} -result {invalid rowid 1}
 
 test dbf-4.0.1 {create/setup/open/insert many values} -returnCodes 1 -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
@@ -298,7 +297,7 @@ test dbf-4.0.8 {create/setup/open ro/insert} -returnCodes 1 -constraints SHAPELI
    catch {file delete [file join [temporaryDirectory] test.dbf]}
 } -body {
    list [$d insert end {foo}] [$d info]
-} -result {update error, field S}
+} -result {Failure writing DBF record 0.}
 
 test dbf-4.1.0 {create/setup/open/insert} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}

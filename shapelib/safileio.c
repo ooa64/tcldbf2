@@ -83,8 +83,9 @@ static int SADRemove(const char *filename, void *pvUserData)
     return remove(filename);
 }
 
-static void SADError(const char *message)
+static void SADError(const char *message, void *pvUserData)
 {
+    (void)pvUserData;
     fprintf(stderr, "%s\n", message);
 }
 
