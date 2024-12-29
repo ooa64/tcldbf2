@@ -134,12 +134,12 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
 
       Tcl_Obj * result = Tcl_GetObjResult(tclInterp);
       const char * field = Tcl_GetString(objv[2]);
-      int i = DBFGetFieldIndex(dbf, field);
-      if (i < 0) {
+      int index = DBFGetFieldIndex(dbf, field);
+      if (index < 0) {
         Tcl_AppendResult(tclInterp, "unknown field ", field, NULL);
         return TCL_ERROR;
       }
-      GetField(result, i);
+      GetField(result, index);
 
     } else {
 
@@ -156,6 +156,28 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
     break;
 
   case cmValues:
+
+    if (objc != 3) {
+      Tcl_WrongNumArgs(tclInterp, 0, objv, "<object> values field");
+      return TCL_ERROR;
+    } else {
+
+      const char * field = Tcl_GetString(objv[2]);
+      int index = DBFGetFieldIndex(dbf, field);
+      if (index < 0) {
+        Tcl_AppendResult(tclInterp, "unknown field ", field, NULL);
+        return TCL_ERROR;
+      }
+      Tcl_Obj * result = Tcl_GetObjResult(tclInterp);
+      int count = DBFGetRecordCount(dbf);
+      for (int i = 0; i < count; i++) {
+        Tcl_Obj * value = NULL;
+        if (GetFieldValue(i, index, &value) == TCL_ERROR) {
+          return TCL_ERROR;
+        }
+        Tcl_ListObjAppendElement(tclInterp, result, value);
+      }
+    }
     break;
 
   case cmRecord:
