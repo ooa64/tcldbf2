@@ -329,7 +329,7 @@ test dbf-4.1.2 {create/setup/open/insert twice same rowid} -setup {
    list [$d insert 0 {foo}] [$d insert 0 {bar}] [$d info]
 } -result {0 0 {1 1}}
 
-test dbf-4.1.3 {create/setup/open/update} -setup {
+test dbf-4.2.1 {create/setup/open/update} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
    dbf d open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
@@ -339,7 +339,7 @@ test dbf-4.1.3 {create/setup/open/update} -setup {
    list [$d update end S {foo}] [$d info]
 } -result {0 {1 1}}
 
-test dbf-4.1.4 {create/setup/open/update twice} -setup {
+test dbf-4.2.2 {create/setup/open/update twice} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
    dbf d open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
@@ -359,7 +359,17 @@ test dbf-4.3.1 {create/setup/open/insert/record} -setup {
    list [$d insert 0 {foo}] [$d record 0]
 } -result {0 foo}
 
-test dbf-4.3.2 {create/setup/open/insert/long record} -setup {
+test dbf-4.3.2 {create/setup/open/update/record} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
+   dbf d open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   list [$d update 0 S {foo}] [$d record 0]
+} -result {0 foo}
+
+test dbf-4.3.3 {create/setup/open/insert/long record} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] $simple_struct
    dbf d open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
@@ -369,5 +379,16 @@ test dbf-4.3.2 {create/setup/open/insert/long record} -setup {
    dbf_insert $d $simple_data
    list [$d record 0] [$d record 1]
 } -result [lrange $simple_data 0 end]
+
+test dbf-4.4.0 {deleted mark} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
+   dbf d open [file join [temporaryDirectory] test.dbf]
+   $d insert 0 {}
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   list [$d deleted 0] [$d deleted 0 true] [$d deleted 0] [$d deleted 0 false] [$d deleted 0]
+} -result {0 1 1 0 0}
 
 cleanupTests

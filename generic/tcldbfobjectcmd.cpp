@@ -237,6 +237,31 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
     break;
 
   case cmDeleted:
+
+    if (objc < 3 || objc > 4) {
+      Tcl_WrongNumArgs(tclInterp, 0, objv, "<object> deleted rowid ?mark?");
+      return TCL_ERROR;
+    } else {
+      
+      int rowid;
+      if (GetRowid(objv[2], &rowid) == TCL_ERROR) {
+        return TCL_ERROR;
+      }
+      if (objc == 4) {
+        int deleted;
+        if (Tcl_GetBooleanFromObj(tclInterp, objv[3], &deleted) == TCL_ERROR) {
+          return TCL_ERROR;
+        }
+        if (!DBFMarkRecordDeleted(dbf, rowid, deleted)) {
+          return TCL_ERROR;
+          if (CheckLastError() != TCL_ERROR) { 
+            Tcl_SetResult(tclInterp, (char *)"failed to change deleted mark", NULL);
+          }
+          return TCL_ERROR;
+        }
+      }
+			Tcl_SetObjResult(tclInterp, Tcl_NewIntObj(DBFIsRecordDeleted(dbf, rowid)));
+    }
     break;
 
   case cmClose:
