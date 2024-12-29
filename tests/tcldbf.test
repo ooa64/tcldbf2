@@ -39,9 +39,31 @@ proc dbf_insert {dbf data} {
 
 ###
 
-test dbf-1.0 {usage} -returnCodes 1 -body {
-   dbf
-} -result {wrong # args: should be "dbf <varname> create|open <filename> ?option?"}
+foreach {n c} {
+   0 "dbf"
+   1 "dbf d"
+   2 "dbf d foo" 
+   3 "dbf d create" 
+   4 "dbf d open" 
+   5 "dbf d foo bar" 
+} {
+   test dbf-1.0.$n "usage '$c'" -returnCodes 1 -body {
+      {*}$c
+   } -result {wrong # args: should be "dbf <varname> create|open <filename> ?option?"}
+   unset n c
+}
+
+test dbf-1.0.10 "usage 'dbf create with opts'" -returnCodes 1 -body {
+   dbf d create foo -codepage
+} -result {wrong # args: should be "dbf <varname> create <filename> ?-codepage <codepage>?"}
+
+test dbf-1.0.11 "usage 'dbf create with opts2'" -returnCodes 1 -body {
+   dbf d create foo -bar baz
+} -result {wrong # args: should be "dbf <varname> create <filename> ?-codepage <codepage>?"}
+
+test dbf-1.0.12 "usage 'dbf open with opts'" -returnCodes 1 -body {
+   dbf d open foo -bar
+} -result {wrong # args: should be "dbf <varname> open <filename> ?-readonly?"}
 
 test dbf-2.0.0.0 {create} -cleanup {
    catch {rename $d ""; unset d}
@@ -309,6 +331,16 @@ test dbf-4.1.0 {create/setup/open/insert} -setup {
    list [$d insert end {foo}] [$d info]
 } -result {0 {1 1}}
 
+test dbf-4.1.0.1 {create/setup/open/long insert} -constraints TRUNCATE -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
+   dbf d open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   list [$d insert end {foofoofoofoo}] [$d info]
+} -result {0 {1 1}}
+
 test dbf-4.1.1 {create/setup/open/insert twice} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
    dbf d open [file join [temporaryDirectory] test.dbf]
@@ -402,5 +434,28 @@ test dbf-4.5.0 {deleted mark} -setup {
 } -body {
    list [$d deleted 0] [$d deleted 0 true] [$d deleted 0] [$d deleted 0 false] [$d deleted 0]
 } -result {0 1 1 0 0}
+
+test dbf-4.6.0 {codepage} -setup {
+   dbf d create [file join [temporaryDirectory] test.dbf] -codepage LDID/201
+   $d add S C 10
+   $d insert 0 {Перший нах}
+} -cleanup {
+   catch {$d forget; unset d}
+   #catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   $d record 0
+} -result {{Перший нах}}
+exit
+
+test dbf-4.6.1 {codepage after open} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}} -codepage LDID/201
+   dbf d open [file join [temporaryDirectory] test.dbf]
+   $d insert 0 {Йцукенгшщз}
+} -cleanup {
+   catch {$d forget; unset d}
+   #catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   $d record 0
+} -result {Йцукенгшщз}
 
 cleanupTests
