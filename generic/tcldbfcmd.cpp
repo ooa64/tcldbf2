@@ -41,14 +41,12 @@ int TclDbfCmd::Command(int objc, Tcl_Obj * const objv[]) {
       codepage = Tcl_GetString(objv[5]);
     } else if (objc > 4) {
       Tcl_WrongNumArgs(tclInterp, 1, objv, "<varname> create <filename> ?-codepage <codepage>?");
-      result = TCL_ERROR;
       goto exit;
     }
 
     dbf = DBFCreateEx(filename, codepage);
     if (dbf == NULL) {
       Tcl_AppendResult(tclInterp, "create ", Tcl_GetString(objv[3]), " failed", NULL);
-      result = TCL_ERROR;
       goto exit;
     }
 
@@ -60,20 +58,17 @@ int TclDbfCmd::Command(int objc, Tcl_Obj * const objv[]) {
       openmode = "rb";
     } else if (objc > 4) {
       Tcl_WrongNumArgs(tclInterp, 1, objv, "<varname> open <filename> ?-readonly?");
-      result = TCL_ERROR;
       goto exit;
     }
 
     dbf = DBFOpen(filename, openmode);
     if (dbf == NULL) {
       Tcl_AppendResult(tclInterp, "open ", Tcl_GetString(objv[3]), " failed", NULL);
-      result = TCL_ERROR;
       goto exit;
     }
   
   } else {
     Tcl_WrongNumArgs(tclInterp, 1, objv, "<varname> create|open <filename> ?option?");
-    result = TCL_ERROR;
     goto exit;
   }
 

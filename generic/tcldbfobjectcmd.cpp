@@ -57,9 +57,9 @@ TclDbfObjectCmd::TclDbfObjectCmd(Tcl_Interp * interp, const char * name, TclCmd 
   Tcl_DStringInit(&dstring);
   Tcl_DStringInit(&message);
   encoding = Tcl_GetEncoding(NULL, codepage_encoding(handle->pszCodePage));    
+  handle->sHooks.Error = TclDbfError; 
+  handle->sHooks.pvUserData = this;
   dbf = handle;
-  dbf->sHooks.Error = TclDbfError; 
-  dbf->sHooks.pvUserData = this;
 } 
 
 TclDbfObjectCmd::~TclDbfObjectCmd() {
@@ -147,7 +147,9 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
       int count = DBFGetFieldCount(dbf);
       for (int i = 0; i < count; i++) {
         Tcl_Obj * field = Tcl_NewObj();
-        GetField(field, i); 
+        if (GetField(field, i) == TCL_ERROR) {
+          return TCL_ERROR;
+        } 
         Tcl_ListObjAppendElement(tclInterp, result, field);
       }
     }
@@ -163,11 +165,11 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
       return TCL_ERROR;
     } else {
 
-      Tcl_Obj * result = Tcl_GetObjResult(tclInterp);
       int rowid;
       if (GetRowid(objv[2], &rowid) == TCL_ERROR) {
         return TCL_ERROR;
       }
+      Tcl_Obj * result = Tcl_GetObjResult(tclInterp);
       int count = DBFGetFieldCount(dbf);
       for (int i = 0; i < count; i++) {
         Tcl_Obj * value = NULL;
@@ -266,13 +268,12 @@ int TclDbfObjectCmd::GetFieldValue(int rowid, int index, Tcl_Obj ** valueObj) {
   } else if (type == FTDouble) {
     *valueObj = Tcl_NewDoubleObj(DBFReadDoubleAttribute(dbf, rowid, index));
   } else if (type == FTInteger) {
-    // FIXME: use Bigint?
     *valueObj = Tcl_NewIntObj(DBFReadIntegerAttribute(dbf, rowid, index));
   } else if (type == FTDate) {
+    // NOTE: skip double conversion
     // SHPDate date = DBFReadDateAttribute(dbf, rowid, index);
     // char value[9]; /* "yyyyMMdd\0" */
     // snprintf(value, sizeof(value), "%04d%02d%02d", date->year, date->month, date->day);
-    // NOTE: skip double conversion
     *valueObj = Tcl_NewStringObj(DBFReadStringAttribute(dbf, rowid, index), -1);
   } else if (type == FTLogical) {
     *valueObj = Tcl_NewStringObj(DBFReadLogicalAttribute(dbf, rowid, index), -1);
@@ -347,7 +348,9 @@ int TclDbfObjectCmd::GetRowid(Tcl_Obj * rowidObj, int * rowid) {
   int rcount = DBFGetRecordCount(dbf);
   if (strcmp(Tcl_GetString(rowidObj), "end") == 0) {
     *rowid = rcount;
-  } else if (Tcl_GetIntFromObj(tclInterp, rowidObj, rowid) == TCL_ERROR || *rowid < 0 || *rowid > rcount) {
+  } else if (Tcl_GetIntFromObj(tclInterp, rowidObj, rowid) == TCL_ERROR) {
+    return TCL_ERROR;
+  } else if (*rowid < 0 || *rowid > rcount) {
     Tcl_AppendResult(tclInterp, "invalid rowid ", Tcl_GetString(rowidObj), NULL);
     return TCL_ERROR;
   }
