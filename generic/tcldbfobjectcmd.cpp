@@ -335,8 +335,10 @@ int TclDbfObjectCmd::GetFieldValue(int rowid, int fieldid, Tcl_Obj ** valueObj) 
 int TclDbfObjectCmd::SetFieldValue(int rowid, int fieldid, Tcl_Obj * valueObj) {
   int result = false;
   char * value = Tcl_GetString(valueObj);
+
+  int width;
   char label [XBASE_FLDNAME_LEN_READ+1];
-  DBFFieldType type = DBFGetFieldInfo(dbf, fieldid, label, NULL, NULL);
+  DBFFieldType type = DBFGetFieldInfo(dbf, fieldid, label, &width, NULL);
 
   if (strcmp(value, "") == 0) {
 
@@ -344,11 +346,17 @@ int TclDbfObjectCmd::SetFieldValue(int rowid, int fieldid, Tcl_Obj * valueObj) {
 
   } else if (type == FTString) {
 
-    // FIXME: check for valid encoding
-    // FIXME: check for truncation
-    result = DBFWriteStringAttribute(dbf, rowid, fieldid, DecodeTclString(value));
-    // FIXME: negative result: maybe, string is too long
-    result = true;
+    // NOTE: decode and truncate string.
+    // FIXME: check for valid encoding?
+    // FIXME: configure string truncation?
+    Tcl_DString s;
+    Tcl_DStringInit(&s);
+    Tcl_UtfToExternalDString(encoding, value, -1, &s);
+    if (Tcl_DStringLength(&s) > width) {
+      Tcl_DStringSetLength(&s, width);
+    }
+    result = DBFWriteStringAttribute(dbf, rowid, fieldid, Tcl_DStringValue(&s));
+    Tcl_DStringFree(&s);
 
   } else if (type == FTDouble) {
 
