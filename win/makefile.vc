@@ -51,7 +51,7 @@ PRJ_DEFINES = $(PRJ_DEFINES) -DTCLCMD_DEBUG -DTCLDBF_DEBUG -DTCLDBFCMD_DEBUG -DT
 # We must define a pkgindex target that will create a pkgIndex.tcl
 # file in the $(OUT_DIR) directory. We can just redirect to the
 # default-pkgindex target for our sample extension.
-pkgindex: default-pkgindex
+pkgindex: default-pkgindex-tea
 
 $(ROOT)\manifest.uuid:
    copy $(WIN_DIR)\gitmanifest.in $(ROOT)\manifest.uuid

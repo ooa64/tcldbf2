@@ -29,7 +29,10 @@
         returns a list of values of the field $name
 
   $d record $rowid
-        returns a list of cell values (as strings) for the given row
+        returns a list of cell values for the given row
+
+  $d get $rowid ?field?
+        returns a cell value for the given row or dictionary of cells
 
   $d insert $rowid|end value [value ...]
         inserts the specified values into the given record
@@ -53,9 +56,10 @@ static void TclDbfError(const char *message, void *pvUserData)
 }
 
 TclDbfObjectCmd::TclDbfObjectCmd(Tcl_Interp * interp, const char * name, TclCmd * parent,
-    DBFHandle handle): TclCmd(interp, name, parent) {
+    DBFHandle handle, int v1compatible): TclCmd(interp, name, parent) {
   Tcl_DStringInit(&dstring);
   Tcl_DStringInit(&message);
+  compatible = v1compatible;
   encoding = Tcl_GetEncoding(NULL, codepage_encoding(handle->pszCodePage));    
   handle->sHooks.Error = TclDbfError; 
   handle->sHooks.pvUserData = this;
@@ -72,11 +76,11 @@ TclDbfObjectCmd::~TclDbfObjectCmd() {
 
 int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
   static const char *commands[] = {
-    "info", "codepage", "add", "fields", "values", "record",
+    "info", "codepage", "add", "fields", "values", "record", "get",
     "insert", "update", "deleted", "forget", "close", 0L
   };
   enum commands {
-    cmInfo, cmCodepage, cmAdd, cmFields, cmValues, cmRecord,
+    cmInfo, cmCodepage, cmAdd, cmFields, cmValues, cmRecord, cmGet,
     cmInsert, cmUpdate, cmDeleted, cmForget, cmClose
   };
   int index;
@@ -95,14 +99,18 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
 
   case cmInfo:
 
-    if (objc > 2) {
-      Tcl_WrongNumArgs(tclInterp, 0, objv, "<dbf> info");
-      return TCL_ERROR;
-    } else {
+    if (objc == 2) {
       Tcl_Obj * result = Tcl_GetObjResult(tclInterp);
       Tcl_ListObjAppendElement(tclInterp, result, Tcl_NewIntObj(DBFGetRecordCount(dbf)));
       Tcl_ListObjAppendElement(tclInterp, result, Tcl_NewIntObj(DBFGetFieldCount(dbf)));
-    }
+    } else if (objc == 3 && strcmp(Tcl_GetString(objv[2]), "records") == 0) {
+      Tcl_SetObjResult(tclInterp, Tcl_NewIntObj(DBFGetRecordCount(dbf)));
+    } else if (objc == 3 && strcmp(Tcl_GetString(objv[2]), "fields") == 0) {
+      Tcl_SetObjResult(tclInterp, Tcl_NewIntObj(DBFGetFieldCount(dbf)));
+    } else {
+      Tcl_WrongNumArgs(tclInterp, 0, objv, "<dbf> info ?records|fields?");
+      return TCL_ERROR;
+    } 
     break;
 
   case cmCodepage:
@@ -171,7 +179,7 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
       Tcl_Obj * result = Tcl_GetObjResult(tclInterp);
       int rcount = DBFGetRecordCount(dbf);
       for (int rowid = 0; rowid < rcount; rowid++) {
-        Tcl_Obj * value = NULL;
+        Tcl_Obj * value;
         if (GetFieldValue(rowid, fieldid, &value) == TCL_ERROR) {
           return TCL_ERROR;
         }
@@ -194,7 +202,7 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
       Tcl_Obj * result = Tcl_GetObjResult(tclInterp);
       int fcount = DBFGetFieldCount(dbf);
       for (int fieldid = 0; fieldid < fcount; fieldid++) {
-        Tcl_Obj * value = NULL;
+        Tcl_Obj * value;
         if (GetFieldValue(rowid, fieldid, &value) == TCL_ERROR) {
           return TCL_ERROR;
         }
@@ -203,15 +211,72 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
     }
     break;
 
-  case cmInsert:
+  case cmGet:
 
-    if (objc < 3) {
-      Tcl_WrongNumArgs(tclInterp, 0, objv, "<dbf> insert <rowid>|end ?<value>? ?<value> ...?");
+    if (objc < 3 || objc > 4) {
+      Tcl_WrongNumArgs(tclInterp, 0, objv, "<dbf> get <rowid> ?label?");
       return TCL_ERROR;
     } else {
 
+      int rowid;
+      if (GetRowid(objv[2], &rowid) == TCL_ERROR) {
+        return TCL_ERROR;
+      }
+
+      if (objc == 4) {
+
+        const char * label = Tcl_GetString(objv[3]);
+        int fieldid = DBFGetFieldIndex(dbf, label);
+        if (fieldid < 0) {
+          Tcl_AppendResult(tclInterp, "unknown field ", label, NULL);
+          return TCL_ERROR;
+        }
+        Tcl_Obj * value;
+        if (GetFieldValue(rowid, fieldid, &value) == TCL_ERROR) {
+          return TCL_ERROR;
+        }
+        Tcl_SetObjResult(tclInterp, value);
+
+      } else {
+
+        Tcl_Obj * result = Tcl_GetObjResult(tclInterp);
+        int fcount = DBFGetFieldCount(dbf);
+        for (int fieldid = 0; fieldid < fcount; fieldid++) {
+          Tcl_Obj * value;
+          if (GetFieldValue(rowid, fieldid, &value) == TCL_ERROR) {
+            return TCL_ERROR;
+          }
+          char label [XBASE_FLDNAME_LEN_READ+1];
+          DBFFieldType type = DBFGetFieldInfo(dbf, fieldid, label, NULL, NULL);
+          Tcl_ListObjAppendElement(tclInterp, result, Tcl_NewStringObj(label, -1));
+          Tcl_ListObjAppendElement(tclInterp, result, value);
+        }
+      }
+    }
+    break;
+
+  case cmInsert:
+
+    if (objc < 3) {
+      Tcl_WrongNumArgs(tclInterp, 0, objv, "<dbf> insert <rowid>|end <list>|?<value> ...?");
+      return TCL_ERROR;
+    } else {
+
+      int vobjc;
+      Tcl_Obj ** vobjv;
+      if (objc == 4 && objv[3]->typePtr && objv[3]->typePtr->name &&
+          strcmp(objv[3]->typePtr->name, "list") == 0) {
+        // NOTE: v1 compatibility
+        if (Tcl_ListObjGetElements(tclInterp, objv[3], &vobjc, &vobjv) == TCL_ERROR) {
+          return TCL_ERROR;
+        }
+      } else {
+        vobjc = objc - 3;
+        vobjv = &(Tcl_Obj *)objv[3];
+      }
+
       int fcount = DBFGetFieldCount(dbf);
-      if (objc > (fcount + 3)) {
+      if (vobjc > fcount && !compatible) {
         Tcl_SetResult(tclInterp, (char *)"too many values", NULL);
         return TCL_ERROR;
       }
@@ -219,14 +284,16 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
       if (GetRowid(objv[2], &rowid) == TCL_ERROR) {
         return TCL_ERROR;
       }
-      for (int i = 3; i < objc; i++) {
-        if (SetFieldValue(rowid, i - 3, objv[i]) == TCL_ERROR) {
+      for (int i = 0; i < vobjc && i < fcount; i++) {
+        if (SetFieldValue(rowid, i, vobjv[i]) == TCL_ERROR) {
           return TCL_ERROR;
         }
       }
-      DBFUpdateHeader(dbf);
-      if (CheckLastError() == TCL_ERROR) {
-        return TCL_ERROR;
+      if (!compatible) {
+        DBFUpdateHeader(dbf);
+        if (CheckLastError() == TCL_ERROR) {
+          return TCL_ERROR;
+        }
       }
       Tcl_SetObjResult(tclInterp, Tcl_NewIntObj(rowid));
     }
@@ -251,6 +318,12 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
           return TCL_ERROR;
         }
         if (SetFieldValue(rowid, fieldid, objv[i+1]) == TCL_ERROR) {
+          return TCL_ERROR;
+        }
+      }
+      if (!compatible) {
+        DBFUpdateHeader(dbf);
+        if (CheckLastError() == TCL_ERROR) {
           return TCL_ERROR;
         }
       }
@@ -282,7 +355,7 @@ int TclDbfObjectCmd::Command(int objc, Tcl_Obj * const objv[]) {
           return TCL_ERROR;
         }
       }
-			Tcl_SetObjResult(tclInterp, Tcl_NewIntObj(DBFIsRecordDeleted(dbf, rowid)));
+      Tcl_SetObjResult(tclInterp, Tcl_NewIntObj(DBFIsRecordDeleted(dbf, rowid)));
     }
     break;
 
@@ -310,6 +383,8 @@ int TclDbfObjectCmd::GetFieldValue(int rowid, int fieldid, Tcl_Obj ** valueObj) 
 
   if (DBFIsAttributeNULL(dbf, rowid, fieldid)) {
     *valueObj = Tcl_NewStringObj("", -1);
+  } else if (compatible) {
+    *valueObj = Tcl_NewStringObj(EncodeTclString(DBFReadStringAttribute(dbf, rowid, fieldid)), -1);
   } else if (type == FTString) {
     *valueObj = Tcl_NewStringObj(EncodeTclString(DBFReadStringAttribute(dbf, rowid, fieldid)), -1);
   } else if (type == FTDouble) {
@@ -395,7 +470,7 @@ int TclDbfObjectCmd::SetFieldValue(int rowid, int fieldid, Tcl_Obj * valueObj) {
     return TCL_ERROR;
   }
 
-  if (!result) {
+  if (!result && !compatible) {
     Tcl_AppendResult(tclInterp, "update error, field ", label, NULL);
     return TCL_ERROR;
   }
@@ -461,7 +536,7 @@ int TclDbfObjectCmd::GetField(Tcl_Obj * fieldObj, int fieldid) {
   DBFFieldType type = DBFGetFieldInfo(dbf, fieldid, label, &width, &prec);
 
   Tcl_ListObjAppendElement(NULL, fieldObj, Tcl_NewStringObj(EncodeTclString(label), -1));
-  Tcl_ListObjAppendElement(NULL, fieldObj, Tcl_NewStringObj(type_of(type), -11));
+  Tcl_ListObjAppendElement(NULL, fieldObj, Tcl_NewStringObj(type_of(type), -1));
   Tcl_ListObjAppendElement(NULL, fieldObj, Tcl_NewStringObj(&nativetype, 1));
   Tcl_ListObjAppendElement(NULL, fieldObj, Tcl_NewIntObj(width));
   Tcl_ListObjAppendElement(NULL, fieldObj, Tcl_NewIntObj(prec));

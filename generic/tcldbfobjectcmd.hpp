@@ -8,7 +8,7 @@
 class TclDbfObjectCmd : public TclCmd {
 
 public:
-  TclDbfObjectCmd(Tcl_Interp * interp, const char * name, TclCmd * parent, DBFHandle handle);
+  TclDbfObjectCmd(Tcl_Interp * interp, const char * name, TclCmd * parent, DBFHandle handle, int v1compatible);
   virtual ~TclDbfObjectCmd();
 
   void SetLastError(const char * s) {
@@ -17,6 +17,7 @@ public:
   }
 
 private:
+  int compatible;
   DBFHandle dbf;
   Tcl_Encoding encoding;
   Tcl_DString dstring;

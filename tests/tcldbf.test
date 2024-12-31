@@ -2,6 +2,8 @@ package require tcldbf
 package require tcltest
 namespace import ::tcltest::*
 
+# encoding system utf-8
+
 testConstraint utf8 [expr {[encoding system] eq "utf-8"}]
 
 ###
@@ -55,6 +57,8 @@ foreach {n c} {
    unset n c
 }
 
+# create / open errors
+
 test dbf-1.0.10 "usage 'dbf create with opts'" -returnCodes 1 -body {
    dbf d create foo -codepage
 } -result {wrong # args: should be "dbf <varname> create <filename> ?-codepage <codepage>?"}
@@ -99,6 +103,8 @@ test dbf-1.0.18 "open invalid file (v1 compat)" -setup {
    dbf d -open $f
 } -result {0}
 
+# create
+
 test dbf-2.0.0.0 {create} -cleanup {
    catch {rename $d ""; unset d}
    catch {file delete [file join [temporaryDirectory] test.dbf]}
@@ -128,6 +134,8 @@ test dbf-2.0.2 {create/forget} -cleanup {
    $d forget
    info commands $d
 } -result {}
+
+# open
 
 test dbf-3.0.0.0 {create/open} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {}
@@ -168,6 +176,8 @@ test dbf-3.0.3 {create/open/forget} -setup {
    info commands $d
 } -result {}
 
+# open with codepage
+
 test dbf-3.1.0 {create/open/codepage default} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {}
    dbf d open [file join [temporaryDirectory] test.dbf]
@@ -188,6 +198,8 @@ test dbf-3.1.1 {create/open/codepage custom} -setup {
 } -body {
    $d codepage
 } -result {LDID/201}
+
+# add fields
 
 test dbf-3.2.0.0 {create/setup error} -returnCodes 1 -setup {
    dbf d create [file join [temporaryDirectory] test.dbf]
@@ -266,6 +278,8 @@ test dbf-3.2.4 {create/setup/open/info} -setup {
 } -body {
    $d info
 } -result [list 0 [llength $simple_struct]]
+
+# insert
 
 test dbf-4.0.0 {create/setup/open/insert past end} -returnCodes 1 -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
@@ -385,6 +399,8 @@ test dbf-4.1.2 {create/setup/open/insert twice same rowid} -setup {
    list [$d insert 0 {foo}] [$d insert 0 {bar}] [$d info]
 } -result {0 0 {1 1}}
 
+# update
+
 test dbf-4.2.1 {create/setup/open/update} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
    dbf d open [file join [temporaryDirectory] test.dbf]
@@ -405,17 +421,9 @@ test dbf-4.2.2 {create/setup/open/update twice} -setup {
    list [$d update end S {foo}] [$d update end S {bar}] [$d info]
 } -result {0 1 {2 1}}
 
-test dbf-4.3.0 {create/setup/open/too long insert} -setup {
-   dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
-   dbf d open [file join [temporaryDirectory] test.dbf]
-} -cleanup {
-   catch {$d forget; unset d}
-   catch {file delete [file join [temporaryDirectory] test.dbf]}
-} -body {
-   list [$d insert end {foofoofoofoo}] [$d record 0]
-} -result {0 foofoofoof}
+# record
 
-test dbf-4.3.1 {create/setup/open/insert/record} -setup {
+test dbf-4.3.0 {create/setup/open/insert/record} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
    dbf d open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
@@ -424,6 +432,16 @@ test dbf-4.3.1 {create/setup/open/insert/record} -setup {
 } -body {
    list [$d insert 0 {foo}] [$d record 0]
 } -result {0 foo}
+
+test dbf-4.3.1 {create/setup/open/too long insert} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
+   dbf d open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   list [$d insert end {foofoofoofoo}] [$d record 0]
+} -result {0 foofoofoof}
 
 test dbf-4.3.2 {create/setup/open/update/record} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
@@ -435,7 +453,57 @@ test dbf-4.3.2 {create/setup/open/update/record} -setup {
    list [$d update 0 S {foo}] [$d record 0]
 } -result {0 foo}
 
-test dbf-4.3.3 {create/setup/open/insert/long record} -setup {
+test dbf-4.3.3 {create/setup/open/insert two strings} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S1 - C 10 0} {S2 - C 10 0}}
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   list [$d insert 0 foo bar] [$d record 0]
+} -result {0 {foo bar}}
+
+test dbf-4.3.4 {insert a string with two words} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S1 - C 10 0} {S2 - C 10 0}}
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   list [$d insert 0 {foo bar}] [$d record 0]
+} -result {0 {{foo bar} {}}}
+
+test dbf-4.3.5 {insert a list with two strings} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S1 - C 10 0} {S2 - C 10 0}}
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   list [$d insert 0 [list foo bar]] [$d record 0]
+} -result {0 {foo bar}}
+
+test dbf-4.3.6 {insert list and strings} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S1 - C 10 0} {S2 - C 10 0}}
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   list [$d insert 0 [list foo bar] baz] [$d record 0]
+} -result {0 {{foo bar} baz}}
+
+test dbf-4.3.7 {empty list} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
+   dbf d open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   list [$d insert 0 {}] [$d info]
+} -result {0 {0 1}}
+
+test dbf-4.3.8 {insert long record} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] $simple_struct
    dbf d open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
@@ -446,7 +514,55 @@ test dbf-4.3.3 {create/setup/open/insert/long record} -setup {
    list [$d record 0] [$d record 1]
 } -result [lrange $simple_data 0 end]
 
-test dbf-4.4.0 {values} -setup {
+# get
+
+test dbf-4.4.0 {get syntax} -returnCodes 1 -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S1 - C 10 0} {S2 - C 10 0}}
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+   $d insert 0 foo bar
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   $d get 0 S1 S2
+} -result {wrong # args: should be "<dbf> get <rowid> ?label?"}
+
+test dbf-4.4.1 {get invalid field} -returnCodes 1 -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S1 - C 10 0} {S2 - C 10 0}}
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+   $d insert 0 foo bar
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   $d get 0 S3
+} -result {unknown field S3}
+
+test dbf-4.4.2 {get by field label} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S1 - C 10 0} {S2 - C 10 0}}
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+   $d insert 0 foo bar
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   list [$d get 0 S1] [$d get 0 S2]
+} -result {foo bar}
+
+test dbf-4.4.3 {get dict} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] {{S1 - C 10 0} {S2 - C 10 0}}
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+   $d insert 0 foo bar
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   $d get 0
+} -result {S1 foo S2 bar}
+
+# values
+
+test dbf-4.5.0 {values} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
    dbf d open [file join [temporaryDirectory] test.dbf]
    $d insert end {foo}
@@ -458,31 +574,33 @@ test dbf-4.4.0 {values} -setup {
    $d values S
 } -result {foo bar}
 
-test dbf-4.5.0 {deleted mark} -setup {
+# deleted
+
+test dbf-4.6.0 {deleted mark} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
    dbf d open [file join [temporaryDirectory] test.dbf]
-   $d insert 0 {}
+   $d insert 0 {foo}
 } -cleanup {
    catch {$d forget; unset d}
-   catch {file delete [file join [temporaryDirectory] test.dbf]}
+   #catch {file delete [file join [temporaryDirectory] test.dbf]}
 } -body {
    list [$d deleted 0] [$d deleted 0 true] [$d deleted 0] [$d deleted 0 false] [$d deleted 0]
 } -result {0 1 1 0 0}
 
-test dbf-4.6.0.0 {codepage} -setup {
+# codepage encoding
+
+test dbf-4.7.0 {codepage} -setup {
    dbf d create [file join [temporaryDirectory] test.dbf] -codepage LDID/201
    $d add S C 10
    $d insert 0 {Йцукенгшщз}
 } -cleanup {
    catch {$d forget; unset d}
-   #catch {file delete [file join [temporaryDirectory] test.dbf]}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
 } -body {
    list [$d codepage] [$d record 0]
 } -result {LDID/201 Йцукенгшщз}
 
-exit
-
-test dbf-4.6.0.1 {codepage/truncation} -setup {
+test dbf-4.7.1 {codepage/truncation} -setup {
    dbf d create [file join [temporaryDirectory] test.dbf] -codepage LDID/201
    $d add S C 10
    $d insert 0 {Йцукенгшщзх}
@@ -493,7 +611,7 @@ test dbf-4.6.0.1 {codepage/truncation} -setup {
    list [$d codepage] [$d record 0]
 } -result {LDID/201 Йцукенгшщз}
 
-test dbf-4.6.0.2 {codepage/utf} -constraints utf8 -setup {
+test dbf-4.7.2 {codepage/utf} -constraints utf8 -setup {
    dbf d create [file join [temporaryDirectory] test.dbf]
    $d add S C 10
    $d insert 0 {Йцуке}
@@ -504,7 +622,7 @@ test dbf-4.6.0.2 {codepage/utf} -constraints utf8 -setup {
    list [$d codepage] [$d record 0]
 } -result {LDID/87 Йцуке}
 
-test dbf-4.6.0.3 {codepage/utf truncated} -constraints utf8 -setup {
+test dbf-4.7.3 {codepage/utf truncated} -constraints utf8 -setup {
    dbf d create [file join [temporaryDirectory] test.dbf]
    $d add S C 10
    $d insert 0 {Йцукен}
@@ -515,7 +633,7 @@ test dbf-4.6.0.3 {codepage/utf truncated} -constraints utf8 -setup {
    list [$d codepage] [$d record 0]
 } -result {LDID/87 Йцуке}
 
-test dbf-4.6.0.4 {codepage/utf truncated incompletely} -constraints utf8 -setup {
+test dbf-4.7.4 {codepage/utf truncated incompletely} -constraints utf8 -setup {
    dbf d create [file join [temporaryDirectory] test.dbf]
    $d add S C 11
    $d insert 0 {Йцукен}
@@ -526,13 +644,13 @@ test dbf-4.6.0.4 {codepage/utf truncated incompletely} -constraints utf8 -setup 
    list [$d codepage] [$d record 0]
 } -result "LDID/87 Йцуке\xD0"
 
-test dbf-4.6.1 {codepage after open} -setup {
+test dbf-4.7.5 {codepage after open} -setup {
    dbf d create [file join [temporaryDirectory] test.dbf] -codepage LDID/201
    $d add S C 10
    $d insert 0 {Йцукенгшщз}
    $d forget
    dbf d open [file join [temporaryDirectory] test.dbf]
-   $d insert 0 {Йцукенгшщз}
+   $d insert 1 {Йцукенгшщз}
 } -cleanup {
    catch {$d forget; unset d}
    catch {file delete [file join [temporaryDirectory] test.dbf]}

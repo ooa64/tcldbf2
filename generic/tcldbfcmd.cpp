@@ -29,6 +29,7 @@ int TclDbfCmd::Command(int objc, Tcl_Obj * const objv[]) {
   Tcl_DStringInit(&s);
   Tcl_DStringInit(&e);
 
+  int compatible = Tcl_GetString(objv[2])[0] == '-';
   char * varname = Tcl_GetString(objv[1]);
   char * filename = Tcl_UtfToExternalDString(NULL,
       Tcl_TranslateFileName(tclInterp, Tcl_GetString(objv[3]), &s), -1, &e);
@@ -74,12 +75,12 @@ int TclDbfCmd::Command(int objc, Tcl_Obj * const objv[]) {
 
   char cmdname[9];
   snprintf(cmdname, sizeof(cmdname), "dbf.%04X", dbfcounter++);
-  (void) new TclDbfObjectCmd(tclInterp, cmdname, this, dbf);
+  (void) new TclDbfObjectCmd(tclInterp, cmdname, this, dbf, compatible);
 
   Tcl_SetVar2(tclInterp, varname, NULL, cmdname, 0);
-  if (Tcl_GetString(objv[2])[0] != '-') {
-    // NOTE: SetResult produces strange result, like memory dump
-    // Tcl_SetResult(tclInterp, cmdname, NULL);
+  if (compatible) {
+    Tcl_AppendResult(tclInterp, "1", NULL);
+  } else {
     Tcl_AppendResult(tclInterp, cmdname, NULL);
   }
   result = TCL_OK;
@@ -87,10 +88,9 @@ int TclDbfCmd::Command(int objc, Tcl_Obj * const objv[]) {
 exit:
   Tcl_DStringFree(&e);
   Tcl_DStringFree(&s);
-  if (Tcl_GetString(objv[2])[0] == '-') {
-    // v.1 compatibility
-    Tcl_SetResult(tclInterp, (char *)(result == TCL_OK ? "1" : "0"), NULL);
-    return TCL_OK;
+  if (compatible && result == TCL_ERROR) {
+    Tcl_SetResult(tclInterp, (char *)"0", NULL);
+    result = TCL_OK;
   }
   return result;
 };
