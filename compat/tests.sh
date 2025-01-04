@@ -13,5 +13,5 @@ tclsh -encoding utf-8 $TCLDBF1/test6.tcl
 tclsh -encoding utf-8 $TCLDBF1/test7.tcl
 tclsh -encoding utf-8 $TCLDBF1/test8.tcl
 
-tclsh -encoding utf-8 %TCLDBF1%/dbf.test -verbose bpse
+tclsh -encoding utf-8 $TCLDBF1/dbf.test -verbose bpse
 

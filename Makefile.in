@@ -18,7 +18,11 @@
 #========================================================================
 
 #TCLDBF_NEW_VAR	= @TCLDBF_NEW_VAR@
-CFLAGS_DEBUGLOG = @CFLAGS_DEBUGLOG@ 
+
+CFLAGS_DEBUGLOG = @CFLAGS_DEBUGLOG@
+PACKAGE_NAME2	= @PACKAGE_NAME2@
+PACKAGE_VERSION2= @PACKAGE_VERSION2@
+CFLAGS_TCLDBF= -DPACKAGE_NAME2=\"$(PACKAGE_NAME2)\" -DPACKAGE_VERSION2=\"$(PACKAGE_VERSION2)\" $(CFLAGS_DEBUGLOG)
 
 #========================================================================
 # Nothing of the variables below this line should need to be changed.
@@ -171,7 +175,7 @@ CFLAGS		= @CFLAGS@
 LDFLAGS		= @LDFLAGS@
 LDFLAGS_DEFAULT			= @LDFLAGS_DEFAULT@
 COMPILE		= $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) \
-			  $(CFLAGS_DEFAULT) $(CFLAGS_WARNING) $(CFLAGS_DEBUGLOG) $(SHLIB_CFLAGS) $(CFLAGS)
+			  $(CFLAGS_DEFAULT) $(CFLAGS_WARNING) $(CFLAGS_TCLDBF) $(SHLIB_CFLAGS) $(CFLAGS) 
 
 GDB		= gdb
 VALGRIND	= valgrind

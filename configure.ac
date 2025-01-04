@@ -21,6 +21,11 @@ dnl	to configure the system for the local environment.
 
 AC_INIT([tcldbf],[2.0])
 
+PACKAGE_NAME2="dbf"
+PACKAGE_VERSION2="1.3.9"
+AC_SUBST(PACKAGE_NAME2)
+AC_SUBST(PACKAGE_VERSION2)
+
 #--------------------------------------------------------------------
 # Call TEA_INIT as the first TEA_ macro to set up initial vars.
 # This will define a ${TEA_PLATFORM} variable == "unix" or "windows"

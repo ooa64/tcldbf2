@@ -10,38 +10,41 @@
 #endif
 
 /*
-  dbf d -open|open $input_file [-readonly]
+  dbf d -open $input_file [-readonly]
     opens dbase file, returns a handle.
-  dbf d -create|create $input_file [-codepage $codepage]
+
+  dbf d -create $input_file [-codepage $codepage]
     creates dbase file, returns a handle
 */
 
-int TclDbfCmd::Command(int objc, Tcl_Obj * const objv[]) {
+int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
   if (objc < 4) {
-    Tcl_WrongNumArgs(tclInterp, 1, objv, "<varname> create|open <filename> ?option?");
+    Tcl_WrongNumArgs(tclInterp, 1, objv, "<varname> -create|-open <filename> ?option?");
+    return TCL_ERROR;
+  }
+  if (dbfcounter >= 0xFFFF) {
+    Tcl_AppendResult(tclInterp, "too many dbfs open", NULL);
     return TCL_ERROR;
   }
 
-  int result = TCL_ERROR;
   DBFHandle dbf;
   Tcl_DString s;
   Tcl_DString e;
   Tcl_DStringInit(&s);
   Tcl_DStringInit(&e);
+  int result = TCL_ERROR;
 
-  int compatible = Tcl_GetString(objv[2])[0] == '-';
   char * varname = Tcl_GetString(objv[1]);
   char * filename = Tcl_UtfToExternalDString(NULL,
       Tcl_TranslateFileName(tclInterp, Tcl_GetString(objv[3]), &s), -1, &e);
 
-  if (strcmp(Tcl_GetString(objv[2]), "create") == 0 ||
-      strcmp(Tcl_GetString(objv[2]), "-create") == 0) {
+  if (strcmp(Tcl_GetString(objv[2]), "-create") == 0) {
 
     const char * codepage = "LDID/87"; /* 87 - ANSI */
     if (objc == 6 && strcmp(Tcl_GetString(objv[4]), "-codepage") == 0) {
       codepage = Tcl_GetString(objv[5]);
     } else if (objc > 4) {
-      Tcl_WrongNumArgs(tclInterp, 1, objv, "<varname> create <filename> ?-codepage <codepage>?");
+      Tcl_WrongNumArgs(tclInterp, 3, objv, "<filename> ?-codepage <codepage>?");
       goto exit;
     }
 
