@@ -19,7 +19,6 @@ foreach {n c} {
    2 "dbf d -foo" 
    3 "dbf d -create" 
    4 "dbf d -open" 
-   5 "dbf d -foo bar" 
 } {
    test dbf-1.$n "usage '$c'" -returnCodes 1 -body {
       {*}$c
@@ -28,16 +27,20 @@ foreach {n c} {
 }
 
 test dbf-1.10 "usage 'dbf create with opts'" -returnCodes 1 -body {
+   dbf d -foo bar
+} -result {wrong # args: should be "dbf d -create|-open <filename> ?option?"}
+
+test dbf-1.11 "usage 'dbf create with opts'" -returnCodes 1 -body {
    dbf d -create foo -codepage
-} -result {wrong # args: should be "dbf <varname> -create <filename> ?-codepage <codepage>?"}
+} -result {wrong # args: should be "dbf d -create <filename> ?-codepage <codepage>?"}
 
-test dbf-1.11 "usage 'dbf create with opts2'" -returnCodes 1 -body {
+test dbf-1.12 "usage 'dbf create with opts2'" -returnCodes 1 -body {
    dbf d -create foo -bar baz
-} -result {wrong # args: should be "dbf <varname> -create <filename> ?-codepage <codepage>?"}
+} -result {wrong # args: should be "dbf d -create <filename> ?-codepage <codepage>?"}
 
-test dbf-1.12 "usage 'dbf open with opts'" -returnCodes 1 -body {
+test dbf-1.13 "usage 'dbf open with opts'" -returnCodes 1 -body {
    dbf d -open foo -bar
-} -result {wrong # args: should be "dbf <varname> -open <filename> ?-readonly?"}
+} -result {wrong # args: should be "dbf d -open <filename> ?-readonly?"}
 
 # create / open errors
 

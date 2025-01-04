@@ -30,7 +30,8 @@ TclCmd::TclCmd(Tcl_Interp * interp, const char * name, TclCmd * parent) {
 
 TclCmd::~TclCmd() {
   DEBUGLOG("TclCmd::Destruct *" << this);
-  while (pChildren) delete pChildren;
+  while (pChildren)
+    delete pChildren;
   SetParent(NULL);
   Rename(NULL, NULL);
 }
@@ -41,12 +42,12 @@ void TclCmd::Rename(Tcl_Interp * interp, const char * name) {
 	     Tcl_GetCommandName(tclInterp, tclToken) << \
 	     "' to '" << name << "'");
     tclInterp = interp;
-    tclToken = Tcl_CreateObjCommand(interp, name, 
+    tclToken = Tcl_CreateObjCommand(interp, name,
 				    &TclCmd::Dispatch, this, TclCmd::Destroy);
   } else if (IsNamed()) {
     DEBUGLOG("TclCmd::Rename *" << this << " '" << \
 	     Tcl_GetCommandName(tclInterp, tclToken) << "' to ''");
-    Tcl_Interp * oldInterp = tclInterp; 
+    Tcl_Interp * oldInterp = tclInterp;
     Tcl_Command  oldToken = tclToken;
 
     Unname();
@@ -82,7 +83,7 @@ void TclCmd::RemoveChild(TclCmd * child) {
     pChildren = child->pNext;
 }
 
-int TclCmd::Dispatch (ClientData clientData, Tcl_Interp * interp, 
+int TclCmd::Dispatch (ClientData clientData, Tcl_Interp * interp,
 		     int objc, Tcl_Obj * const objv[]) {
   TclCmd *o = (TclCmd *) clientData;
 

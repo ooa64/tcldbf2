@@ -54,14 +54,13 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
       goto exit;
     }
 
-  } else if (strcmp(Tcl_GetString(objv[2]), "open") == 0 ||
-        strcmp(Tcl_GetString(objv[2]), "-open") == 0) {
+  } else if (strcmp(Tcl_GetString(objv[2]), "-open") == 0) {
 
     const char * openmode = "rb+";
     if (objc == 5 && strcmp(Tcl_GetString(objv[4]), "-readonly") == 0) {
       openmode = "rb";
     } else if (objc > 4) {
-      Tcl_WrongNumArgs(tclInterp, 1, objv, "<varname> open <filename> ?-readonly?");
+      Tcl_WrongNumArgs(tclInterp, 3, objv, "<filename> ?-readonly?");
       goto exit;
     }
 
@@ -72,7 +71,7 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
     }
   
   } else {
-    Tcl_WrongNumArgs(tclInterp, 1, objv, "<varname> create|open <filename> ?option?");
+    Tcl_WrongNumArgs(tclInterp, 2, objv, "-create|-open <filename> ?option?");
     goto exit;
   }
 
