@@ -5,6 +5,7 @@ namespace import ::tcltest::*
 # encoding system utf-8
 
 testConstraint utf8 [expr {[encoding system] eq "utf-8"}]
+testConstraint tcltestEncodingBug [expr {[configure -singleproc] || [testConstraint macOrUnix]}]
 
 ###
 
@@ -506,14 +507,14 @@ test command-4.6.0 {deleted mark} -setup {
    $d insert 0 {foo}
 } -cleanup {
    catch {$d forget; unset d}
-   #catch {file delete [file join [temporaryDirectory] test.dbf]}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
 } -body {
    list [$d deleted 0] [$d deleted 0 true] [$d deleted 0] [$d deleted 0 false] [$d deleted 0]
 } -result {0 1 1 0 0}
 
 # codepage encoding
 
-test command-4.7.0 {codepage} -setup {
+test command-4.7.0 {codepage} -constraints tcltestEncodingBug -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf] -codepage LDID/201
    $d add S C 10
    $d insert 0 {Йцукенгшщз}
@@ -524,7 +525,7 @@ test command-4.7.0 {codepage} -setup {
    list [$d codepage] [$d record 0]
 } -result {LDID/201 Йцукенгшщз}
 
-test command-4.7.1 {codepage/truncation} -setup {
+test command-4.7.1 {codepage/truncation} -constraints tcltestEncodingBug -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf] -codepage LDID/201
    $d add S C 10
    $d insert 0 {Йцукенгшщзх}
@@ -535,7 +536,7 @@ test command-4.7.1 {codepage/truncation} -setup {
    list [$d codepage] [$d record 0]
 } -result {LDID/201 Йцукенгшщз}
 
-test command-4.7.2 {codepage/utf} -constraints utf8 -setup {
+test command-4.7.2 {codepage/utf} -constraints {utf8 tcltestEncodingBug} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
    $d add S C 10
    $d insert 0 {Йцуке}
@@ -546,7 +547,7 @@ test command-4.7.2 {codepage/utf} -constraints utf8 -setup {
    list [$d codepage] [$d record 0]
 } -result {LDID/87 Йцуке}
 
-test command-4.7.3 {codepage/utf truncated} -constraints utf8 -setup {
+test command-4.7.3 {codepage/utf truncated} -constraints {utf8 tcltestEncodingBug} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
    $d add S C 10
    $d insert 0 {Йцукен}
@@ -557,7 +558,7 @@ test command-4.7.3 {codepage/utf truncated} -constraints utf8 -setup {
    list [$d codepage] [$d record 0]
 } -result {LDID/87 Йцуке}
 
-test command-4.7.4 {codepage/utf truncated incompletely} -constraints utf8 -setup {
+test command-4.7.4 {codepage/utf truncated incompletely} -constraints {utf8 tcltestEncodingBug} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
    $d add S C 11
    $d insert 0 {Йцукен}
@@ -568,7 +569,7 @@ test command-4.7.4 {codepage/utf truncated incompletely} -constraints utf8 -setu
    list [$d codepage] [$d record 0]
 } -result "LDID/87 Йцуке\xD0"
 
-test command-4.7.5 {codepage after open} -setup {
+test command-4.7.5 {codepage after open} -constraints tcltestEncodingBug -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf] -codepage LDID/201
    $d add S C 10
    $d insert 0 {Йцукенгшщз}

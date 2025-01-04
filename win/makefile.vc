@@ -19,6 +19,9 @@
 # The name of the package
 PROJECT = tcldbf
 
+PACKAGE_NAME2 = dbf
+PACKAGE_VERSION2 = 1.3.9
+
 SHAPELIBDIR = ../shapelib
 
 !include "rules-ext.vc"
@@ -36,7 +39,7 @@ PRJ_OBJS = \
 	$(TMP_DIR)\safileio.obj
 
 # Define any additional compiler flags that might be required for the project
-PRJ_DEFINES = -D_CRT_SECURE_NO_DEPRECATE
+PRJ_DEFINES = -D_CRT_SECURE_NO_DEPRECATE -DPACKAGE_NAME2=\"$(PACKAGE_NAME2)\" -DPACKAGE_VERSION2=\"$(PACKAGE_VERSION2)\"
 PRJ_INCLUDES = -I$(SHAPELIBDIR)
 
 !if "$(DEBUGLOG)" != ""
@@ -51,7 +54,17 @@ PRJ_DEFINES = $(PRJ_DEFINES) -DTCLCMD_DEBUG -DTCLDBF_DEBUG -DTCLDBFCMD_DEBUG -DT
 # We must define a pkgindex target that will create a pkgIndex.tcl
 # file in the $(OUT_DIR) directory. We can just redirect to the
 # default-pkgindex target for our sample extension.
-pkgindex: default-pkgindex-tea
+pkgindex:
+	@if exist $(ROOT)\pkgIndex.tcl.in nmakehlp -s << $(ROOT)\pkgIndex.tcl.in > $(OUT_DIR)\pkgIndex.tcl
+@PACKAGE_VERSION@    $(DOTVERSION)
+@PACKAGE_NAME@       $(PRJ_PACKAGE_TCLNAME)
+@PACKAGE_VERSION2@   $(PACKAGE_VERSION2)
+@PACKAGE_NAME2@      $(PACKAGE_NAME2)
+@PACKAGE_TCLNAME@    $(PRJ_PACKAGE_TCLNAME)
+@PKG_LIB_FILE@       $(PRJLIBNAME)
+@PKG_LIB_FILE8@      $(PRJLIBNAME8)
+@PKG_LIB_FILE9@      $(PRJLIBNAME9)
+<<
 
 $(ROOT)\manifest.uuid:
    copy $(WIN_DIR)\gitmanifest.in $(ROOT)\manifest.uuid

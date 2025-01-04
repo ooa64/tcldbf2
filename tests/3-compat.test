@@ -1,22 +1,23 @@
-package require dbf
 package require tcltest
 namespace import ::tcltest::*
 
+testConstraint noSingleProc [expr {![configure -singleproc]}]
+
 # dbf syntax
 
-test compat-1.1 "package version" -body {
+test compat-1.0 "package version" -constraints noSingleProc -body {
    package require dbf
 } -result {1.3.*} -match glob
 
-test compat-1.1 "create invalid name" {
+test compat-1.1 "create invalid name" noSingleProc {
    dbf d -create __notexistent__/foo
 } {0}
 
-test compat-1.2 "open invalid name" {
+test compat-1.2 "open invalid name" noSingleProc {
    dbf d -open __notexistent__/foo
 } {0}
 
-test compat-1.3 "open invalid file" -setup {
+test compat-1.3 "open invalid file" -constraints noSingleProc -setup {
    set f [tcltest::makeFile "bar" foo]
 } -cleanup {
    tcltest::removeFile foo; unset f
@@ -24,14 +25,14 @@ test compat-1.3 "open invalid file" -setup {
    dbf d -open $f
 } -result {0}
 
-test compat-1.4 {create success} -cleanup {
+test compat-1.4 {create success} -constraints noSingleProc -cleanup {
    catch {rename $d ""; unset d}
    catch {file delete [file join [temporaryDirectory] test.dbf]}
 } -body {
    dbf d -create [file join [temporaryDirectory] test.dbf]
 } -result {1}
 
-test compat-1.5 {open success} -setup {
+test compat-1.5 {open success} -constraints noSingleProc -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
    $d forget; unset d
 } -cleanup {
@@ -41,7 +42,7 @@ test compat-1.5 {open success} -setup {
    dbf d -open [file join [temporaryDirectory] test.dbf]
 } -result {1}
 
-test compat-2.0 {insert too many values} -setup {
+test compat-2.0 {insert too many values} -constraints noSingleProc -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf] 
    $d add C C 10 0
 } -cleanup {
@@ -51,7 +52,7 @@ test compat-2.0 {insert too many values} -setup {
    $d insert end {foo} {bar}
 } -result {0}
 
-test compat-2.1 {insert invalid logical} -setup {
+test compat-2.1 {insert invalid logical} -constraints noSingleProc -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
    $d add L L 1 0
 } -cleanup {
@@ -61,7 +62,7 @@ test compat-2.1 {insert invalid logical} -setup {
    $d insert end X
 } -result {0}
 
-test compat-2.2 {float format} -setup {
+test compat-2.2 {float format} -constraints noSingleProc -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
    $d add N N 10 2
 } -cleanup {
