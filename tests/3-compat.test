@@ -9,13 +9,13 @@ test compat-1.0 "package version" -constraints noSingleProc -body {
    package require dbf
 } -result {1.3.*} -match glob
 
-test compat-1.1 "create invalid name" noSingleProc {
+test compat-1.1 "create invalid name" -constraints noSingleProc -body {
    dbf d -create __notexistent__/foo
-} {0}
+} -result {0} -returnCodes 0 
 
-test compat-1.2 "open invalid name" noSingleProc {
+test compat-1.2 "open invalid name" -constraints noSingleProc -body {
    dbf d -open __notexistent__/foo
-} {0}
+} -result {Error: could not open input file __notexistent__\foo} -returnCodes 1 
 
 test compat-1.3 "open invalid file" -constraints noSingleProc -setup {
    set f [tcltest::makeFile "bar" foo]
@@ -23,10 +23,10 @@ test compat-1.3 "open invalid file" -constraints noSingleProc -setup {
    tcltest::removeFile foo; unset f
 } -body {
    dbf d -open $f
-} -result {0}
+} -result {Error: could not open input file *\foo} -match glob -returnCodes 1
 
 test compat-1.4 {create success} -constraints noSingleProc -cleanup {
-   catch {rename $d ""; unset d}
+   catch {$d forget; unset d}
    catch {file delete [file join [temporaryDirectory] test.dbf]}
 } -body {
    dbf d -create [file join [temporaryDirectory] test.dbf]
@@ -72,5 +72,16 @@ test compat-2.2 {float format} -constraints noSingleProc -setup {
    $d insert 0 1.2
    $d record 0
 } -result {1.20}
+
+test compat-3.1 {nonascii data} -constraints noSingleProc -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+   $d add S C 10
+   $d insert 0  {Йцукенгшщз}
+} -cleanup {
+   catch {$d forget; unset d}
+   catch {file delete [file join [temporaryDirectory] test.dbf]}
+} -body {
+   $d record 0
+} -result {Йцукенгшщз}
 
 cleanupTests

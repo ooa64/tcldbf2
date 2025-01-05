@@ -49,7 +49,15 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
     }
 
     dbf = DBFCreateEx(filename, codepage);
-    if (dbf == NULL) {
+    if (compatible) {
+      if (dbf == NULL) {
+        Tcl_AppendResult(tclInterp, "0", NULL);
+        result = TCL_OK;
+        goto exit;
+      } else {
+        Tcl_AppendResult(tclInterp, "1", NULL);
+      }
+    } else if (dbf == NULL) {
       Tcl_AppendResult(tclInterp, "create ", Tcl_GetString(objv[3]), " failed", NULL);
       goto exit;
     }
@@ -65,7 +73,14 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
     }
 
     dbf = DBFOpen(filename, openmode);
-    if (dbf == NULL) {
+    if (compatible) {
+      if (dbf == NULL) {
+        Tcl_AppendResult(tclInterp, "Error: could not open input file ", filename, NULL);
+        goto exit;
+      } else {
+        Tcl_AppendResult(tclInterp, "1", NULL);
+      }
+    } else if (dbf == NULL) {
       Tcl_AppendResult(tclInterp, "open ", Tcl_GetString(objv[3]), " failed", NULL);
       goto exit;
     }
@@ -80,9 +95,7 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
   (void) new TclDbfObjectCmd(tclInterp, cmdname, this, dbf, compatible);
 
   Tcl_SetVar2(tclInterp, varname, NULL, cmdname, 0);
-  if (compatible) {
-    Tcl_AppendResult(tclInterp, "1", NULL);
-  } else {
+  if (!compatible) {
     Tcl_AppendResult(tclInterp, cmdname, NULL);
   }
   result = TCL_OK;
@@ -90,9 +103,5 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
 exit:
   Tcl_DStringFree(&e);
   Tcl_DStringFree(&s);
-  if (compatible && result == TCL_ERROR) {
-    Tcl_SetResult(tclInterp, (char *)"0", NULL);
-    result = TCL_OK;
-  }
   return result;
 };
