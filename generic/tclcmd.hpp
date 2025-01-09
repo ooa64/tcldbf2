@@ -43,8 +43,6 @@ public:
   TclCmd * Prev() {return pPrev;};
   TclCmd * Children() {return pChildren;};
   void SetParent(TclCmd * parent);
-  void AddChild(TclCmd * child);
-  void RemoveChild(TclCmd * child);
 
   static void Destroy(ClientData);
   // Static function for destroying database objects
@@ -69,6 +67,9 @@ protected:
   TclCmd * pPrev;
   TclCmd * pChildren;
   // links for linking certain objects to each other
+
+  void AddChild(TclCmd * child);
+  void RemoveChild(TclCmd * child);
 
 private:
 
