@@ -445,14 +445,16 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
 
   } else if (type == FTString) {
 
-    // NOTE: decode and truncate string.
-    // FIXME: check for valid encoding?
-    // FIXME: configure string truncation?
+    // NOTE: decode and truncate? string.
+    // FIXME: check for valid encoding
     Tcl_DString s;
     Tcl_DStringInit(&s);
     Tcl_UtfToExternalDString(encoding, value, -1, &s);
     if (Tcl_DStringLength(&s) > width) {
-      Tcl_DStringSetLength(&s, width);
+      // Tcl_DStringSetLength(&s, width);
+      Tcl_AppendResult(tclInterp, "too long value, field ", label, " row ", NULL);
+      Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
+      return TCL_ERROR;
     }
     result = DBFWriteStringAttribute(dbf, rowid, fieldid, Tcl_DStringValue(&s));
     Tcl_DStringFree(&s);
@@ -461,7 +463,8 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
 
     double d;
     if (Tcl_GetDoubleFromObj(tclInterp, valueObj, &d) == TCL_ERROR) {
-      Tcl_AppendResult(tclInterp, ", field ", label, NULL);
+      Tcl_AppendResult(tclInterp, ", field ", label, " row ", NULL);
+      Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
       return TCL_ERROR;
     }
     result = DBFWriteDoubleAttribute (dbf, rowid, fieldid, d);
@@ -470,7 +473,8 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
 
     int i;
     if (Tcl_GetIntFromObj(tclInterp, valueObj, &i) == TCL_ERROR) {
-      Tcl_AppendResult(tclInterp, ", field ", label, NULL);
+      Tcl_AppendResult(tclInterp, ", field ", label, " row ", NULL);
+      Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
       return TCL_ERROR;
     }
     result = DBFWriteIntegerAttribute (dbf, rowid, fieldid, i);
@@ -479,13 +483,26 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
 
     SHPDate date;
     if (3 != sscanf(value, "%4d%2d%2d", &date.year, &date.month, &date.day)) {
-      Tcl_AppendResult(tclInterp, "expected date as YYYYMMDD but got \"", value, "\", field ", label, NULL);
+      Tcl_AppendResult(tclInterp, "expected date as YYYYMMDD but got \"", value, "\", field ", label, " row ", NULL);
+      Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
       return TCL_ERROR;
     }
+    // FIXME: more checks (via mktime or "clock scan")
+    if (date.month < 1 || date.month > 12 || date.day < 1 || date.day > 31) {
+      Tcl_AppendResult(tclInterp, "invalid date, field ", label, " row ", NULL);
+      Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
+      return TCL_ERROR;
+    }
+
     result = DBFWriteDateAttribute (dbf, rowid, fieldid, &date);
 
   } else if (type == FTLogical) {
 
+    if (strlen(value) > 1) {
+      Tcl_AppendResult(tclInterp, "too long value, field ", label, " row ", NULL);
+      Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
+      return TCL_ERROR;
+    }
     result = DBFWriteLogicalAttribute (dbf, rowid, fieldid, *value);
 
   } else {
@@ -495,7 +512,8 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
   }
 
   if (!result && !compatible) {
-    Tcl_AppendResult(tclInterp, "update error, field ", label, NULL);
+    Tcl_AppendResult(tclInterp, "update error, field ", label, " row ", NULL);
+    Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
     return TCL_ERROR;
   }
   return TCL_OK;
