@@ -2,12 +2,6 @@ package require tcldbf
 package require tcltest
 namespace import ::tcltest::*
 
-if {[testConstraint utf8]} {
-    encoding system utf-8
-    fconfigure stdout -encoding utf-8 -translation auto
-    fconfigure stderr -encoding utf-8 -translation auto
-}
-
 # NOTE: tcltest 2.2 runs children without "-encoding utf-8" in the multiproc mode
 testConstraint tcltestEncodingBug [expr {[configure -singleproc] || [testConstraint macOrUnix]}]
 testConstraint utf8 [expr {[encoding system] eq "utf-8"}]
@@ -547,13 +541,12 @@ test command-4.7.0 {codepage} -constraints tcltestEncodingBug -setup {
 test command-4.7.1 {codepage/truncation} -constraints tcltestEncodingBug -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf] -codepage LDID/201
    $d add S C 10
-   $d insert 0 {Йцукенгшщзх}
 } -cleanup {
    catch {$d forget; unset d}
    catch {file delete [file join [temporaryDirectory] test.dbf]}
 } -body {
-   list [$d codepage] [$d record 0]
-} -result {LDID/201 Йцукенгшщз}
+   $d insert 0 {Йцукенгшщзх}
+} -result {too long value, field S row 0} -returnCodes 1
 
 test command-4.7.2 {codepage/utf} -constraints {utf8 tcltestEncodingBug} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
