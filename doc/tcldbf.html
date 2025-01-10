@@ -81,7 +81,7 @@ h2, h3 {
 </head>
 <body>
 
-<h1>tcldbf2 - DBF access</h1>
+<h1>tcldbf - DBF access</h1>
 
 <p>Tcl package for accessing dbase files.
 This package is an interface to the DFB functions of the <a href="http://shapelib.maptools.org">shapelib library</a>.
@@ -100,99 +100,98 @@ The <strong>dbf</strong> command is used to create or open a DBF file.</p>
 <li><strong>package require dbf</strong>
 </li></ul>
 
-<p>This command adds the <strong>dbf</strong> command to the tcl interpreter in the compatibility mode.</p>
+<p>This command adds the <strong>dbf</strong> command to the tcl interpreter in compatibility mode.</p>
 
 <h2>DBF SYNTAX:</h2>
 
 <ul>
-<li><strong>dbf <varname> -open &lt;dbf-file&gt; ?-readonly?</strong>
+<li><strong>dbf</strong> <em>varname</em> -open <em>dbf-file</em> ?-readonly?
 </li></ul>
 
-<p>Opens dbase file and creates new tcl <command> to access file content.
-New <command> name is assigned to the variable <em>varname</em>.
-Returns new <command> name.</p>
+<p>Opens dbase file and creates new tcl <strong>command</strong> to access file content.
+New <strong>command</strong> name is assigned to the variable <em>varname</em>.
+Returns new <strong>command</strong> name.</p>
 
 <p>Compatibility mode: command returns 1 on success, 0 on failure.</p>
 
 <ul>
-<li><strong>dbf <varname> -create &lt;dbf-file&gt; ?-codepage dbf-codepage?</strong>
+<li><strong>dbf</strong> <em>varname</em> -create <em>dbf-file</em> ?-codepage <em>dbf-codepage</em>?
 </li></ul>
 
 <p>Creates empty dbase file.
-Optional codepage can be specified as string LDID/<em>code</em> (see codepage table below). 
-Returns new <command> name.</p>
+Optional codepage can be specified as string LDID/<em>code</em> (see CODEPAGES below). 
+Returns new <strong>command</strong> name.</p>
 
 <p>Compatibility mode: command returns 1 on success, 0 on failure.</p>
 
 <h2>COMMAND SYNTAX:</h2>
 
 <ul>
-<li><strong><command> codepage</strong>
+<li><strong>command</strong> codepage
 </li></ul>
 
 <p>Returns database codepage.</p>
 
 <ul>
-<li><strong><command> info ?records|fields?</strong>
+<li><strong>command</strong> info ?records|fields?
 </li></ul>
 
 <p>Returns the number of records or fields.
 If the optional parameter is not specified, returns a list of two elements - the number of records and the number of fields</p>
 
 <ul>
-<li><em></em><command> add <em>label</em> type|nativetype <em>width</em> ?prec?<em></em>
+<li><strong>command</strong> add <em>label</em> type|nativetype <em>width</em> ?<em>prec</em>?
 </li></ul>
 
-<p>Adds field specified to the empty dbase file.
+<p>Adds field specified to the empty dbase file (see FIELD TYPES below).
 Returns field index.</p>
 
 <ul>
-<li><strong><command> fields|field ?label?</strong>
+<li><strong>command</strong> fields|field ?<em>label</em>?
 </li></ul>
 
 <p>Returns dbase field description as a list of field's label, type, native type, width and precision.
-If optional parameter is not given, returns a list of all fields descriptions.
 If the optional parameter is not specified, returns a list of all field descriptions.</p>
 
 <ul>
-<li><em></em><command> record <em>rowid</em><em></em>
+<li><strong>command</strong> record <em>rowid</em>
 </li></ul>
 
 <p>Returns a list of cell values for the given row</p>
 
 <ul>
-<li><em></em><command> get <em>rowid</em> ?label?<em></em>
+<li><strong>command</strong> get <em>rowid</em> ?<em>label</em>?
 </li></ul>
 
 <p>Returns a cell value for the given row or dictionary of cells</p>
 
 <ul>
-<li><em></em><command> values <em>label</em><em></em>
+<li><strong>command</strong> values <em>label</em>
 </li></ul>
 
 <p>Returns a list of values of the field $name</p>
 
 <ul>
-<li><em></em><command> insert <em>rowid</em>|end <em>list</em>|?<em>value</em> ...?<em></em>
+<li><strong>command</strong> insert <em>rowid</em>|end <em>list</em>|?<em>value</em> ...?
 </li></ul>
 
 <p>Inserts the specified values into the given record</p>
 
 <ul>
-<li><em></em><command> update <em>rowid</em>|end ?<em>field</em> <em>value</em>? ?<em>field</em> <em>value</em> ...?<em></em>
+<li><strong>command</strong> update <em>rowid</em>|end ?<em>field</em> <em>value</em>? ?<em>field</em> <em>value</em> ...?
 </li></ul>
 
-<p>Replaces the specified values of a single field in the record</p>
+<p>Inserts the specified values of a single field into the record</p>
 
 <ul>
-<li><strong><command> deleted rowid ?mark?</strong>
+<li><strong>command</strong> deleted rowid ?<em>mark</em>?
 </li></ul>
 
-<p>Returns or sets the deleted flag for the given rowid</p>
+<p>Returns or updates the deleted flag (boolean) for the given rowid</p>
 
 <ul>
-<li><strong><command> close</strong></li>
-<li><strong><command> forget</strong>
+<li><strong>command</strong> close</li>
+<li><strong>command</strong> forget
 </li></ul>
 
 <p>Closes dbase file</p>

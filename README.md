@@ -1,3 +1,3 @@
-# tcldbf2
+# tcldbf
 
-WIP
+[man page](doc/tcldbf.md)

@@ -1,4 +1,4 @@
-# tcldbf2 - DBF access
+# tcldbf - DBF access
 
 Tcl package for accessing dbase files.
 This package is an interface to the DFB functions of the [shapelib library](http://shapelib.maptools.org).
@@ -13,74 +13,73 @@ The **dbf** command is used to create or open a DBF file.
 
 + **package require dbf**
 
-This command adds the **dbf** command to the tcl interpreter in the compatibility mode.
+This command adds the **dbf** command to the tcl interpreter in compatibility mode.
 
 ## DBF SYNTAX:
 
-+ **dbf <varname> -open <dbf-file> ?-readonly?**
++ **dbf** *varname* -open *dbf-file* ?-readonly?
 
-Opens dbase file and creates new tcl <command> to access file content.
-New <command> name is assigned to the variable *varname*.
-Returns new <command> name.
+Opens dbase file and creates new tcl **command** to access file content.
+New **command** name is assigned to the variable *varname*.
+Returns new **command** name.
 
 Compatibility mode: command returns 1 on success, 0 on failure.
 
-+ **dbf <varname> -create <dbf-file> ?-codepage dbf-codepage?**
++ **dbf** *varname* -create *dbf-file* ?-codepage *dbf-codepage*?
 
 Creates empty dbase file.
-Optional codepage can be specified as string LDID/*code* (see codepage table below). 
-Returns new <command> name.
+Optional codepage can be specified as string LDID/*code* (see CODEPAGES below). 
+Returns new **command** name.
 
 Compatibility mode: command returns 1 on success, 0 on failure.
 
 ## COMMAND SYNTAX:
 
-+ **<command> codepage**
++ **command** codepage
 
 Returns database codepage.
 
-+ **<command> info ?records|fields?**
++ **command** info ?records|fields?
 
 Returns the number of records or fields.
 If the optional parameter is not specified, returns a list of two elements - the number of records and the number of fields
 
-+ **<command> add *label* type|nativetype *width* ?prec?**
++ **command** add *label* type|nativetype *width* ?*prec*?
 
-Adds field specified to the empty dbase file.
+Adds field specified to the empty dbase file (see FIELD TYPES below).
 Returns field index.
 
-+ **<command> fields|field ?label?**
++ **command** fields|field ?*label*?
 
 Returns dbase field description as a list of field's label, type, native type, width and precision.
-If optional parameter is not given, returns a list of all fields descriptions.
 If the optional parameter is not specified, returns a list of all field descriptions.
 
-+ **<command> record *rowid***
++ **command** record *rowid*
 
 Returns a list of cell values for the given row
 
-+ **<command> get *rowid* ?label?**
++ **command** get *rowid* ?*label*?
 
 Returns a cell value for the given row or dictionary of cells
 
-+ **<command> values *label***
++ **command** values *label*
 
 Returns a list of values of the field $name
 
-+ **<command> insert *rowid*|end *list*|?*value* ...?**
++ **command** insert *rowid*|end *list*|?*value* ...?
 
 Inserts the specified values into the given record
 
-+ **<command> update *rowid*|end ?*field* *value*? ?*field* *value* ...?**
++ **command** update *rowid*|end ?*field* *value*? ?*field* *value* ...?
 
-Replaces the specified values of a single field in the record
+Inserts the specified values of a single field into the record
 
-+ **<command> deleted rowid ?mark?**
++ **command** deleted rowid ?*mark*?
 
-Returns or sets the deleted flag for the given rowid
+Returns or updates the deleted flag (boolean) for the given rowid
 
-+ **<command> close**
-+ **<command> forget**
++ **command** close
++ **command** forget
 
 Closes dbase file
 
