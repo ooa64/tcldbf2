@@ -1,0 +1,586 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: ; script-src 'self' 'nonce-d717cfb5d902616b7024920ae20346a8494f7832145c90e0' ; style-src 'self' 'unsafe-inline'" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="title" content="Documentation tcldbf">
+<meta name="author" content="NN">
+<title>Documentation tcldbf</title>
+<style>
+body {
+    margin-left: 10%; margin-right: 10%;
+    font-family: Palatino, "Palatino Linotype", "Palatino LT STD", "Book Antiqua", Georgia, serif;
+    max-width: 90%;
+}
+pre {
+    padding-top:	1ex;
+    padding-bottom:	1ex;
+    padding-left:	2ex;
+    padding-right:	1ex;
+    width:		100%;
+    color: 		black;
+    background: 	#fff4e4;
+    border-top:		1px solid black;
+    border-bottom:		1px solid black;
+    font-family: Monaco, Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
+a {
+    text-decoration: none
+}
+pre.synopsis {
+    background: #cceeff;
+}
+pre.code code.tclin {
+    background-color: #ffeeee;
+}
+pre.code code.tclout {
+    background-color: #ffffee;
+}
+code {
+    font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
+h1,h2, h3,h4 {
+    font-family:	sans-serif;
+    background: 	transparent;
+}
+h1 {
+    font-size: 120%;
+    text-align: center;
+}
+
+h2.author, h2.date {
+    text-align: center;
+    color: black;
+}
+h2 {    font-size: 110%; }
+h3, h4 {  font-size: 100% }
+div.title h1 {
+    font-family: sans-serif;
+    font-size:   120%;
+    background:  transparent;
+    text-align:  center;
+    color:       black;
+}
+div.author h3, div.date h3 {
+    font-family:	sans-serif;
+    font-size:	110%;
+    background: 	transparent;
+    text-align:	center;
+    color: black ;
+}
+h2, h3 {
+    margin-top:  1em;
+    font-family: sans-serif;
+    font-size:	 110%;
+    color:	 #005A9C;
+    background:  transparent;
+    text-align:	 left;
+}
+</style>
+</head>
+<body>
+
+<h1>tcldbf2 - DBF access</h1>
+
+<p>Tcl package for accessing dbase files.
+This package is an interface to the DFB functions of the <a href="http://shapelib.maptools.org">shapelib library</a>.
+At the tcl script level, this library is compatible with <a href="https://geology.usgs.gov/tools/metadata/tcldbf/">tcldbf package</a> with some fixes and extensions.</p>
+
+<h2>LOADING</h2>
+
+<ul>
+<li><strong>package require tcldbf</strong>
+</li></ul>
+
+<p>This command adds the <strong>dbf</strong> command to the tcl interpreter.
+The <strong>dbf</strong> command is used to create or open a DBF file.</p>
+
+<ul>
+<li><strong>package require dbf</strong>
+</li></ul>
+
+<p>This command adds the <strong>dbf</strong> command to the tcl interpreter in the compatibility mode.</p>
+
+<h2>DBF SYNTAX:</h2>
+
+<ul>
+<li><strong>dbf <varname> -open &lt;dbf-file&gt; ?-readonly?</strong>
+</li></ul>
+
+<p>Opens dbase file and creates new tcl <command> to access file content.
+New <command> name is assigned to the variable <em>varname</em>.
+Returns new <command> name.</p>
+
+<p>Compatibility mode: command returns 1 on success, 0 on failure.</p>
+
+<ul>
+<li><strong>dbf <varname> -create &lt;dbf-file&gt; ?-codepage dbf-codepage?</strong>
+</li></ul>
+
+<p>Creates empty dbase file.
+Optional codepage can be specified as string LDID/<em>code</em> (see codepage table below). 
+Returns new <command> name.</p>
+
+<p>Compatibility mode: command returns 1 on success, 0 on failure.</p>
+
+<h2>COMMAND SYNTAX:</h2>
+
+<ul>
+<li><strong><command> codepage</strong>
+</li></ul>
+
+<p>Returns database codepage.</p>
+
+<ul>
+<li><strong><command> info ?records|fields?</strong>
+</li></ul>
+
+<p>Returns the number of records or fields.
+If the optional parameter is not specified, returns a list of two elements - the number of records and the number of fields</p>
+
+<ul>
+<li><em></em><command> add <em>label</em> type|nativetype <em>width</em> ?prec?<em></em>
+</li></ul>
+
+<p>Adds field specified to the empty dbase file.
+Returns field index.</p>
+
+<ul>
+<li><strong><command> fields|field ?label?</strong>
+</li></ul>
+
+<p>Returns dbase field description as a list of field's label, type, native type, width and precision.
+If optional parameter is not given, returns a list of all fields descriptions.
+If the optional parameter is not specified, returns a list of all field descriptions.</p>
+
+<ul>
+<li><em></em><command> record <em>rowid</em><em></em>
+</li></ul>
+
+<p>Returns a list of cell values for the given row</p>
+
+<ul>
+<li><em></em><command> get <em>rowid</em> ?label?<em></em>
+</li></ul>
+
+<p>Returns a cell value for the given row or dictionary of cells</p>
+
+<ul>
+<li><em></em><command> values <em>label</em><em></em>
+</li></ul>
+
+<p>Returns a list of values of the field $name</p>
+
+<ul>
+<li><em></em><command> insert <em>rowid</em>|end <em>list</em>|?<em>value</em> ...?<em></em>
+</li></ul>
+
+<p>Inserts the specified values into the given record</p>
+
+<ul>
+<li><em></em><command> update <em>rowid</em>|end ?<em>field</em> <em>value</em>? ?<em>field</em> <em>value</em> ...?<em></em>
+</li></ul>
+
+<p>Replaces the specified values of a single field in the record</p>
+
+<ul>
+<li><strong><command> deleted rowid ?mark?</strong>
+</li></ul>
+
+<p>Returns or sets the deleted flag for the given rowid</p>
+
+<ul>
+<li><strong><command> close</strong></li>
+<li><strong><command> forget</strong>
+</li></ul>
+
+<p>Closes dbase file</p>
+
+<h2>FIELD TYPES</h2>
+
+<table class="table">
+<thead>
+  <tr>
+    <th style="text-align: left">Type</th>
+    <th style="text-align: center">Nativetype</th>
+    <th style="text-align: left">Width</th>
+    <th style="text-align: left">Prec</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td style="text-align: left">String</td>
+    <td style="text-align: center">C</td>
+    <td style="text-align: left">1-255</td>
+    <td style="text-align: left">0</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">Integer</td>
+    <td style="text-align: center">N,F</td>
+    <td style="text-align: left">1-9</td>
+    <td style="text-align: left">0</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">Double</td>
+    <td style="text-align: center">N,F</td>
+    <td style="text-align: left">1-255</td>
+    <td style="text-align: left">1..width</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">Logical</td>
+    <td style="text-align: center">L</td>
+    <td style="text-align: left">1</td>
+    <td style="text-align: left">0</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">Date</td>
+    <td style="text-align: center">D</td>
+    <td style="text-align: left">8</td>
+    <td style="text-align: left">0</td>
+  </tr>
+</tbody>
+</table>
+
+
+<h2>CODEPAGES</h2>
+
+<table class="table">
+<thead>
+  <tr>
+    <th style="text-align: left">Encoding</th>
+    <th style="text-align: center">Code</th>
+    <th style="text-align: left">Description</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td style="text-align: left">cp437</td>
+    <td style="text-align: center">1</td>
+    <td style="text-align: left">US MS-DOS</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">2</td>
+    <td style="text-align: left">International MS-DOS</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp1252</td>
+    <td style="text-align: center">3</td>
+    <td style="text-align: left">Windows ANSI Latin I</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">macCentEuro</td>
+    <td style="text-align: center">4</td>
+    <td style="text-align: left">Standard Macintosh</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp865</td>
+    <td style="text-align: center">8</td>
+    <td style="text-align: left">Danish OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp437</td>
+    <td style="text-align: center">9</td>
+    <td style="text-align: left">Dutch OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">10</td>
+    <td style="text-align: left">Dutch OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp437</td>
+    <td style="text-align: center">11</td>
+    <td style="text-align: left">Finnish OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp437</td>
+    <td style="text-align: center">13</td>
+    <td style="text-align: left">French OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">14</td>
+    <td style="text-align: left">French OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp437</td>
+    <td style="text-align: center">15</td>
+    <td style="text-align: left">German OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">16</td>
+    <td style="text-align: left">German OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp437</td>
+    <td style="text-align: center">17</td>
+    <td style="text-align: left">Italian OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">18</td>
+    <td style="text-align: left">Italian OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp932</td>
+    <td style="text-align: center">19</td>
+    <td style="text-align: left">Japanese Shift-JIS</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">20</td>
+    <td style="text-align: left">Spanish OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp437</td>
+    <td style="text-align: center">21</td>
+    <td style="text-align: left">Swedish OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">22</td>
+    <td style="text-align: left">Swedish OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp865</td>
+    <td style="text-align: center">23</td>
+    <td style="text-align: left">Norwegian OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp437</td>
+    <td style="text-align: center">24</td>
+    <td style="text-align: left">Spanish OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp437</td>
+    <td style="text-align: center">25</td>
+    <td style="text-align: left">English OEM (Great Britain)</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">26</td>
+    <td style="text-align: left">English OEM (Great Britain)</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp437</td>
+    <td style="text-align: center">27</td>
+    <td style="text-align: left">English OEM (US)</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp863</td>
+    <td style="text-align: center">28</td>
+    <td style="text-align: left">French OEM (Canada)</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">29</td>
+    <td style="text-align: left">French OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp852</td>
+    <td style="text-align: center">31</td>
+    <td style="text-align: left">Czech OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp852</td>
+    <td style="text-align: center">34</td>
+    <td style="text-align: left">Hungarian OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp852</td>
+    <td style="text-align: center">35</td>
+    <td style="text-align: left">Polish OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp860</td>
+    <td style="text-align: center">36</td>
+    <td style="text-align: left">Portuguese OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">37</td>
+    <td style="text-align: left">Portuguese OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp866</td>
+    <td style="text-align: center">38</td>
+    <td style="text-align: left">Cyrillic OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">55</td>
+    <td style="text-align: left">English OEM (US)</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp852</td>
+    <td style="text-align: center">64</td>
+    <td style="text-align: left">Romanian OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp936</td>
+    <td style="text-align: center">77</td>
+    <td style="text-align: left">Chinese GBK (PRC)</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp949</td>
+    <td style="text-align: center">78</td>
+    <td style="text-align: left">Korean (ANSI/OEM)</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp950</td>
+    <td style="text-align: center">79</td>
+    <td style="text-align: left">Chinese Big5 (Taiwan)</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp874</td>
+    <td style="text-align: center">80</td>
+    <td style="text-align: left">Thai (ANSI/OEM)</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">default</td>
+    <td style="text-align: center">87</td>
+    <td style="text-align: left">Current ANSI CP ANSI</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp1252</td>
+    <td style="text-align: center">88</td>
+    <td style="text-align: left">Western European ANSI</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp1252</td>
+    <td style="text-align: center">89</td>
+    <td style="text-align: left">Spanish ANSI</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp852</td>
+    <td style="text-align: center">100</td>
+    <td style="text-align: left">Eastern European MS-DOS</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp866</td>
+    <td style="text-align: center">101</td>
+    <td style="text-align: left">Cyrillic MS-DOS</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp865</td>
+    <td style="text-align: center">102</td>
+    <td style="text-align: left">Nordic MS-DOS</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp861</td>
+    <td style="text-align: center">103</td>
+    <td style="text-align: left">Icelandic MS-DOS</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">104</td>
+    <td style="text-align: left">Kamenicky (Czech) MS-DOS 895</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp850</td>
+    <td style="text-align: center">105</td>
+    <td style="text-align: left">Mazovia (Polish) MS-DOS 620</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp737</td>
+    <td style="text-align: center">106</td>
+    <td style="text-align: left">Greek MS-DOS (437G)</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp857</td>
+    <td style="text-align: center">107</td>
+    <td style="text-align: left">Turkish MS-DOS</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp863</td>
+    <td style="text-align: center">108</td>
+    <td style="text-align: left">French-Canadian MS-DOS</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp950</td>
+    <td style="text-align: center">120</td>
+    <td style="text-align: left">Taiwan Big 5</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp949</td>
+    <td style="text-align: center">121</td>
+    <td style="text-align: left">Hangul (Wansung)</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp936</td>
+    <td style="text-align: center">122</td>
+    <td style="text-align: left">PRC GBK</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp932</td>
+    <td style="text-align: center">123</td>
+    <td style="text-align: left">Japanese Shift-JIS</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp874</td>
+    <td style="text-align: center">124</td>
+    <td style="text-align: left">Thai Windows/MSDOS</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp737</td>
+    <td style="text-align: center">134</td>
+    <td style="text-align: left">Greek OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp852</td>
+    <td style="text-align: center">135</td>
+    <td style="text-align: left">Slovenian OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp857</td>
+    <td style="text-align: center">136</td>
+    <td style="text-align: left">Turkish OEM</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">macCyrillic</td>
+    <td style="text-align: center">150</td>
+    <td style="text-align: left">Cyrillic Macintosh</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">macCentEuro</td>
+    <td style="text-align: center">151</td>
+    <td style="text-align: left">Eastern European Macintosh</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">macGreek</td>
+    <td style="text-align: center">152</td>
+    <td style="text-align: left">Greek Macintosh</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp1250</td>
+    <td style="text-align: center">200</td>
+    <td style="text-align: left">Eastern European Windows</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp1251</td>
+    <td style="text-align: center">201</td>
+    <td style="text-align: left">Cyrillic Windows</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp1254</td>
+    <td style="text-align: center">202</td>
+    <td style="text-align: left">Turkish Windows</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp1253</td>
+    <td style="text-align: center">203</td>
+    <td style="text-align: left">Greek Windows</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">cp1257</td>
+    <td style="text-align: center">204</td>
+    <td style="text-align: left">Baltic Windows</td>
+  </tr>
+</tbody>
+</table>
+
+</body>
+</html>
