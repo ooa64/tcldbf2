@@ -83,9 +83,11 @@ h2, h3 {
 
 <h1>tcldbf - DBF access</h1>
 
-<p>Tcl package for accessing dbase files.
-This package is an interface to the DFB functions of the <a href="http://shapelib.maptools.org">shapelib library</a>.
-At the tcl script level, this library is compatible with <a href="https://geology.usgs.gov/tools/metadata/tcldbf/">tcldbf package</a> with some fixes and extensions.</p>
+<p>Tcl package for accessing dbase files.</p>
+
+<p>This package is an interface to the DFB functions of the <a href="http://shapelib.maptools.org">shapelib library</a>.</p>
+
+<p>At the tcl script level, this library is compatible with <a href="https://geology.usgs.gov/tools/metadata/tcldbf/">tcldbf package</a> with some fixes and extensions.</p>
 
 <h2>LOADING</h2>
 
@@ -157,7 +159,9 @@ If the optional parameter is not specified, returns a list of all field descript
 <li><strong>command</strong> record <em>rowid</em>
 </li></ul>
 
-<p>Returns a list of cell values for the given row</p>
+<p>Returns a list of cell values for the given row.</p>
+
+<p>Compatibility mode: all returned values are strings.</p>
 
 <ul>
 <li><strong>command</strong> get <em>rowid</em> ?<em>label</em>?
@@ -171,17 +175,23 @@ If the optional parameter is not specified, returns a list of all field descript
 
 <p>Returns a list of values of the field $name</p>
 
+<p>Compatibility mode: all returned values are strings.</p>
+
 <ul>
 <li><strong>command</strong> insert <em>rowid</em>|end <em>list</em>|?<em>value</em> ...?
 </li></ul>
 
 <p>Inserts the specified values into the given record</p>
 
+<p>Compatibility mode: relaxed error checking.</p>
+
 <ul>
 <li><strong>command</strong> update <em>rowid</em>|end ?<em>field</em> <em>value</em>? ?<em>field</em> <em>value</em> ...?
 </li></ul>
 
 <p>Inserts the specified values of a single field into the record</p>
+
+<p>Compatibility mode: relaxed error checking.</p>
 
 <ul>
 <li><strong>command</strong> deleted rowid ?<em>mark</em>?
@@ -194,7 +204,9 @@ If the optional parameter is not specified, returns a list of all field descript
 <li><strong>command</strong> forget
 </li></ul>
 
-<p>Closes dbase file</p>
+<p>Closes dbase file.</p>
+
+<p>Compatibility mode: returns &quot;1&quot;.</p>
 
 <h2>FIELD TYPES</h2>
 

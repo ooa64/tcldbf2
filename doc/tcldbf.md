@@ -1,7 +1,9 @@
 # tcldbf - DBF access
 
 Tcl package for accessing dbase files.
+
 This package is an interface to the DFB functions of the [shapelib library](http://shapelib.maptools.org).
+
 At the tcl script level, this library is compatible with [tcldbf package](https://geology.usgs.gov/tools/metadata/tcldbf/) with some fixes and extensions.
 
 ## LOADING
@@ -56,7 +58,9 @@ If the optional parameter is not specified, returns a list of all field descript
 
 + **command** record *rowid*
 
-Returns a list of cell values for the given row
+Returns a list of cell values for the given row.
+
+Compatibility mode: all returned values are strings.
 
 + **command** get *rowid* ?*label*?
 
@@ -66,13 +70,19 @@ Returns a cell value for the given row or dictionary of cells
 
 Returns a list of values of the field $name
 
+Compatibility mode: all returned values are strings.
+
 + **command** insert *rowid*|end *list*|?*value* ...?
 
 Inserts the specified values into the given record
 
+Compatibility mode: relaxed error checking.
+
 + **command** update *rowid*|end ?*field* *value*? ?*field* *value* ...?
 
 Inserts the specified values of a single field into the record
+
+Compatibility mode: relaxed error checking.
 
 + **command** deleted rowid ?*mark*?
 
@@ -81,7 +91,9 @@ Returns or updates the deleted flag (boolean) for the given rowid
 + **command** close
 + **command** forget
 
-Closes dbase file
+Closes dbase file.
+
+Compatibility mode: returns "1".
 
 ## FIELD TYPES
 
