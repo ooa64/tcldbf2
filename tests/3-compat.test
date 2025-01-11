@@ -7,12 +7,7 @@ if {![testConstraint singleTestInterp]} {
    # return
 }
 
-# if {[testConstraint utf8]} {
-#     encoding system utf-8
-#     fconfigure stdout -encoding utf-8 -translation auto
-#     fconfigure stderr -encoding utf-8 -translation auto
-# }
-
+testConstraint tcltestEncodingBug [expr {![configure -singleproc] && [testConstraint win]}]
 testConstraint utf8 [expr {[encoding system] eq "utf-8"}]
 
 # dbf syntax
@@ -85,6 +80,9 @@ test compat-3.1 {nonascii data, singlebyte chars} -constraints {!singleTestInter
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+# 
+# NOTE: tcltest 2.2.5 encoding bug in runAllProcs
+#
    $d add S String 10
    $d insert 0 {Йцукенгшщз}
    $d record 0

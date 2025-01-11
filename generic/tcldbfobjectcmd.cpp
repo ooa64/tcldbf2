@@ -449,9 +449,10 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
     Tcl_DString s;
     Tcl_DStringInit(&s);
     Tcl_UtfToExternalDString(encoding, value, -1, &s);
+    // fprintf(stderr,"encoding:%s,input:%zd,output:%zd\n", Tcl_GetEncodingName(encoding),strlen(value),strlen(Tcl_DStringValue(&s)));
     if (Tcl_DStringLength(&s) > width) {
       if (compatible) {
-        Tcl_DStringSetLength(&s, width);
+        // Tcl_DStringSetLength(&s, width);
       } else {
         Tcl_AppendResult(tclInterp, "too long value, field ", label, " row ", NULL);
         Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));

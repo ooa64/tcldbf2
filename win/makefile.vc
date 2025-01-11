@@ -77,7 +77,7 @@ $(TMP_DIR)\tcldbfUuid.h:	$(ROOT)\manifest.uuid
 # an additional target for our documentation. Note this *adds* a target
 # since no commands are listed after it. The original targets for
 # install (from targets.vc) will remain.
-install: default-install-docs-n
+install: default-install-docs-html
 
 # Explicit dependency rules
 

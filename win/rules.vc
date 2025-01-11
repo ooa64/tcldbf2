@@ -1756,12 +1756,12 @@ TESTFLAGS = $(TESTFLAGS) -file $(TESTPAT)
 default-test: default-setup $(PROJECT)
 	@set TCLLIBPATH=$(OUT_DIR:\=/)
 	@if exist $(LIBDIR) for %f in ("$(LIBDIR)\*.tcl") do @$(COPY) %f "$(OUT_DIR)"
-	cd "$(TESTDIR)" && $(DEBUGGER) $(TCLSH) all.tcl $(TESTFLAGS)
+	cd "$(TESTDIR)" && $(DEBUGGER) $(TCLSH) -encoding utf-8 all.tcl $(TESTFLAGS)
 
 default-shell: default-setup $(PROJECT)
 	@set TCLLIBPATH=$(OUT_DIR:\=/)
 	@if exist $(LIBDIR) for %f in ("$(LIBDIR)\*.tcl") do @$(COPY) %f "$(OUT_DIR)"
-	$(DEBUGGER) $(TCLSH)
+	$(DEBUGGER) $(TCLSH) -encoding utf-8
 
 # Generation of Windows version resource
 !ifdef RCFILE

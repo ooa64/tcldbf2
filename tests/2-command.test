@@ -2,8 +2,9 @@ package require tcldbf
 package require tcltest
 namespace import ::tcltest::*
 
-# NOTE: tcltest 2.2 does not use "-encoding utf-8" in the multiproc mode
+# NOTE: tcltest 2.2 does not use "-encoding utf-8" in the multiproc mode via runAllTests
 testConstraint tcltestEncodingBug [expr {[configure -singleproc] || [testConstraint macOrUnix]}]
+testConstraint tcltestEncodingBug true
 testConstraint utf8 [expr {[encoding system] eq "utf-8"}]
 
 ###
@@ -498,16 +499,22 @@ test command-4.7.0 {codepage} -constraints tcltestEncodingBug -setup {
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+# 
+# NOTE: tcltest 2.2.5 encoding bug in runAllProcs
+#
    $d add S C 10
    $d insert 0 {Йцукенгшщз}
    list [$d codepage] [$d record 0]
 } -result {LDID/201 Йцукенгшщз}
 
-test command-4.7.1 {codepage/truncation} -constraints tcltestEncodingBug -setup {
+test command-4.7.1 {codepage/truncation} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf] -codepage LDID/201
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+# 
+# NOTE: tcltest 2.2.5 encoding bug in runAllProcs
+#
    $d add S C 10
    $d insert 0 {Йцукенгшщзх}
 } -result {too long value, field S row 0} -returnCodes 1
@@ -517,6 +524,9 @@ test command-4.7.2 {codepage/utf} -constraints {utf8 tcltestEncodingBug} -setup 
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+# 
+# NOTE: tcltest 2.2.5 encoding bug in runAllProcs
+#
    $d add S C 10
    $d insert 0 {Йцуке}
    list [$d codepage] [$d record 0]
@@ -527,6 +537,9 @@ test command-4.7.3 {codepage/utf truncated} -constraints {utf8 tcltestEncodingBu
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+# 
+# NOTE: tcltest 2.2.5 encoding bug in runAllProcs
+#
    $d add S C 10
    $d insert 0 {Йцукен}
    list [$d codepage] [$d record 0]
@@ -537,6 +550,9 @@ test command-4.7.4 {codepage after open} -constraints tcltestEncodingBug -setup 
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+# 
+# NOTE: tcltest 2.2.5 encoding bug in runAllProcs
+#
    $d add S C 10
    $d insert 0 {Йцукенгшщз}
    $d forget
