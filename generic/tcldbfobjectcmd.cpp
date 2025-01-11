@@ -445,16 +445,18 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
 
   } else if (type == FTString) {
 
-    // NOTE: decode and truncate? string.
-    // FIXME: check for valid encoding
+    // FIXME: check for valid encoding and truncation
     Tcl_DString s;
     Tcl_DStringInit(&s);
     Tcl_UtfToExternalDString(encoding, value, -1, &s);
     if (Tcl_DStringLength(&s) > width) {
-      // Tcl_DStringSetLength(&s, width);
-      Tcl_AppendResult(tclInterp, "too long value, field ", label, " row ", NULL);
-      Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
-      return TCL_ERROR;
+      if (compatible) {
+        Tcl_DStringSetLength(&s, width);
+      } else {
+        Tcl_AppendResult(tclInterp, "too long value, field ", label, " row ", NULL);
+        Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
+        return TCL_ERROR;
+      }
     }
     result = DBFWriteStringAttribute(dbf, rowid, fieldid, Tcl_DStringValue(&s));
     Tcl_DStringFree(&s);

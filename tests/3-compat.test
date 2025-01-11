@@ -1,11 +1,17 @@
 package require tcltest
 namespace import ::tcltest::*
 
-if {[testConstraint utf8]} {
-    encoding system utf-8
-    fconfigure stdout -encoding utf-8 -translation auto
-    fconfigure stderr -encoding utf-8 -translation auto
+if {![testConstraint singleTestInterp]} {
+   package require dbf
+} else {
+   # return
 }
+
+# if {[testConstraint utf8]} {
+#     encoding system utf-8
+#     fconfigure stdout -encoding utf-8 -translation auto
+#     fconfigure stderr -encoding utf-8 -translation auto
+# }
 
 testConstraint utf8 [expr {[encoding system] eq "utf-8"}]
 
@@ -32,8 +38,7 @@ test compat-1.3 "open invalid file" -constraints !singleTestInterp -setup {
 } -result {Error: could not open input file *\foo} -match glob -returnCodes 1
 
 test compat-1.4 {create success} -constraints !singleTestInterp -cleanup {
-   catch {$d forget; unset d}
-   catch {file delete [file join [temporaryDirectory] test.dbf]}
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
    dbf d -create [file join [temporaryDirectory] test.dbf]
 } -result {1}
@@ -42,62 +47,56 @@ test compat-1.5 {open success} -constraints !singleTestInterp -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
    $d forget; unset d
 } -cleanup {
-   catch {$d forget; unset d}
-   catch {file delete [file join [temporaryDirectory] test.dbf]}
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
    dbf d -open [file join [temporaryDirectory] test.dbf]
 } -result {1}
 
 test compat-2.0 {insert too many values} -constraints !singleTestInterp -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf] 
-   $d add C String 10 0
 } -cleanup {
-   catch {$d forget; unset d}
-   catch {file delete [file join [temporaryDirectory] test.dbf]}
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+   $d add C String 10 0
    $d insert end {foo} {bar}
 } -result {0}
 
 test compat-2.1 {insert invalid logical} -constraints !singleTestInterp -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
-   $d add L Logical 1 0
 } -cleanup {
-   catch {$d forget; unset d}
-   catch {file delete [file join [temporaryDirectory] test.dbf]}
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+   $d add L Logical 1 0
    $d insert end X
 } -result {0}
 
 test compat-2.2 {float format} -constraints !singleTestInterp -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
-   $d add N Double 10 2
 } -cleanup {
-   catch {$d forget; unset d}
-   catch {file delete [file join [temporaryDirectory] test.dbf]}
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+   $d add N Double 10 2
    $d insert 0 1.2
    $d record 0
 } -result {1.20}
 
-test compat-3.1 {nonascii data} -constraints {!singleTestInterp !utf8} -setup {
+test compat-3.1 {nonascii data, singlebyte chars} -constraints {!singleTestInterp && !utf8} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
    $d add S String 10
    $d insert 0 {Йцукенгшщз}
-} -cleanup {
-   catch {$d forget; unset d}
-   catch {file delete [file join [temporaryDirectory] test.dbf]}
-} -body {
    $d record 0
 } -result {Йцукенгшщз}
 
-test compat-3.1 {nonascii data} -constraints {!singleTestInterp utf8} -setup {
+test compat-3.2 {nonascii data, multibyty chars} -constraints {!singleTestInterp && utf8} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
    $d add S String 10
    $d insert 0 {Йцукенгшщз}
-} -cleanup {
-   catch {$d forget; unset d}
-   catch {file delete [file join [temporaryDirectory] test.dbf]}
-} -body {
    $d record 0
 } -result {Йцуке}
 
