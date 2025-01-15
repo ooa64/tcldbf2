@@ -4,7 +4,7 @@ namespace import ::tcltest::*
 if {![testConstraint singleTestInterp]} {
    package require dbf
 } else {
-   # return
+   # cant reload shared library, tests skipped
 }
 
 testConstraint tcltestEncodingBug [expr {![configure -singleproc] && [testConstraint win]}]
@@ -97,5 +97,23 @@ test compat-3.2 {nonascii data, multibyty chars} -constraints {!singleTestInterp
    $d insert 0 {Йцукенгшщз}
    $d record 0
 } -result {Йцуке}
+
+test compat-4.1 {create with custom ext} -constraints !singleTestInterp -setup {
+   dbf d -create [file join [temporaryDirectory] test.foo]
+   $d forget; unset d
+} -cleanup {
+   file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   file exists [file join [temporaryDirectory] test.dbf]
+} -result {1}
+
+test compat-4.2 {create/open with custom ext}  -constraints !singleTestInterp -setup {
+   dbf d -create [file join [temporaryDirectory] test.foo]
+   $d forget; unset d
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   dbf d -open [file join [temporaryDirectory] test.foo]
+} -result {1}
 
 cleanupTests

@@ -368,10 +368,12 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
         free(pszFullname);
         return SHPLIB_NULLPTR;
     }
-    psDBF->fp = psHooks->FOpen(pszFullname, pszAccess, psHooks->pvUserData);
+    psDBF->fp = psHooks->FOpen(
+        psHooks->bKeepFileExtension ? pszFilename : pszFullname,
+        pszAccess, psHooks->pvUserData);
     memcpy(&(psDBF->sHooks), psHooks, sizeof(SAHooks));
 
-    if (psDBF->fp == SHPLIB_NULLPTR)
+    if (psDBF->fp == SHPLIB_NULLPTR && !psHooks->bKeepFileExtension)
     {
         memcpy(pszFullname + nLenWithoutExtension, ".DBF", 5);
         psDBF->fp =
@@ -681,7 +683,9 @@ DBFHandle SHPAPI_CALL DBFCreateLL(const char *pszFilename,
     /* -------------------------------------------------------------------- */
     /*      Create the file.                                                */
     /* -------------------------------------------------------------------- */
-    SAFile fp = psHooks->FOpen(pszFullname, "wb+", psHooks->pvUserData);
+    SAFile fp = psHooks->FOpen(
+         psHooks->bKeepFileExtension ? pszFilename : pszFullname,
+        "wb+", psHooks->pvUserData);
     if (fp == SHPLIB_NULLPTR)
     {
         free(pszFullname);

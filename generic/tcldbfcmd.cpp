@@ -27,7 +27,11 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
     return TCL_ERROR;
   }
 
+
   DBFHandle dbf;
+  SAHooks sHooks;
+  SASetupDefaultHooks(&sHooks);
+  sHooks.bKeepFileExtension = !compatible; 
   Tcl_DString s;
   Tcl_DString e;
   Tcl_DStringInit(&s);
@@ -48,7 +52,7 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
       goto exit;
     }
 
-    dbf = DBFCreateEx(filename, codepage);
+    dbf = DBFCreateLL(filename, codepage, &sHooks);
     if (compatible) {
       if (dbf == NULL) {
         Tcl_AppendResult(tclInterp, "0", NULL);
@@ -72,7 +76,7 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
       goto exit;
     }
 
-    dbf = DBFOpen(filename, openmode);
+    dbf = DBFOpenLL(filename, openmode, &sHooks);
     if (compatible) {
       if (dbf == NULL) {
         Tcl_AppendResult(tclInterp, "Error: could not open input file ", filename, NULL);

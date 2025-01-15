@@ -148,6 +148,7 @@ extern "C"
 
         void (*Error)(const char *message, void *pvUserData);
         double (*Atof)(const char *str);
+        int bKeepFileExtension;
         void *pvUserData;
     } SAHooks;
 

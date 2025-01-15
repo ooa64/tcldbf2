@@ -1,4 +1,4 @@
-package require tcldbf
+package require tcldbf 2.0.1-
 package require tcltest
 namespace import ::tcltest::*
 
@@ -132,5 +132,25 @@ test dbf-6.1 {create/open/codepage custom} -setup {
 } -body {
    $d codepage
 } -result {LDID/201}
+
+# nondefault extension
+
+test dbf-7.1 {create with custom ext} -setup {
+   dbf d -create [file join [temporaryDirectory] test.foo]
+   $d forget; unset d
+} -cleanup {
+   file delete [file join [temporaryDirectory] test.foo]
+} -body {
+   file exists [file join [temporaryDirectory] test.foo]
+} -result {1}
+
+test dbf-7.2 {create/open with custom ext} -setup {
+   dbf d -create [file join [temporaryDirectory] test.foo]
+   $d forget; unset d
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.foo]
+} -body {
+   dbf d -open [file join [temporaryDirectory] test.foo]
+} -result {dbf.????} -match glob
 
 cleanupTests
