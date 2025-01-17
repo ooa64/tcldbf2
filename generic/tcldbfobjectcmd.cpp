@@ -18,6 +18,9 @@
   $d codepage
         returns database codepage
 
+  $d encoding ?encoding?
+        returns or sets currently used encoding
+
   $d add label type|nativetype width [prec]
         adds field specified to the dbf, if created and empty
 
@@ -78,12 +81,14 @@ TclDbfObjectCmd::~TclDbfObjectCmd () {
 
 int TclDbfObjectCmd::Command (int objc, Tcl_Obj * const objv[]) {
   static const char *commands[] = {
-    "info", "codepage", "add", "fields", "values", "record", "get",
-    "insert", "update", "deleted", "forget", "close", 0L
+    "info", "codepage", "encoding", "add", "fields",
+    "values", "record", "get", "insert", "update",
+    "deleted", "forget", "close", 0L
   };
   enum commands {
-    cmInfo, cmCodepage, cmAdd, cmFields, cmValues, cmRecord, cmGet,
-    cmInsert, cmUpdate, cmDeleted, cmForget, cmClose
+    cmInfo, cmCodepage, cmEncoding, cmAdd, cmFields,
+    cmValues, cmRecord, cmGet, cmInsert, cmUpdate, 
+    cmDeleted, cmForget, cmClose
   };
   int index;
 
@@ -129,6 +134,24 @@ int TclDbfObjectCmd::Command (int objc, Tcl_Obj * const objv[]) {
       return TCL_ERROR;
     } else {
       Tcl_SetObjResult(tclInterp, Tcl_NewStringObj(DBFGetCodePage(dbf), -1));
+    }
+    break;
+
+  case cmEncoding:
+
+    if (objc < 2 || objc > 3) {
+      Tcl_WrongNumArgs(tclInterp, 2, objv, "?<encoding>?");
+      return TCL_ERROR;
+    } else {
+      if (objc == 3) {
+        Tcl_Encoding e = Tcl_GetEncoding(tclInterp, Tcl_GetString(objv[2]));
+        if (e == NULL) {
+          return TCL_ERROR;
+        }
+        Tcl_FreeEncoding(encoding);
+        encoding = e;
+      }
+      Tcl_AppendResult(tclInterp, Tcl_GetEncodingName(encoding), NULL);
     }
     break;
 
