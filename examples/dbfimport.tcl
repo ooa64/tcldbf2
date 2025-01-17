@@ -100,7 +100,7 @@ proc createBySniff {chan dbfname} {
 }
 
 proc createByScan {chan dbfname} {
-    if {0 && ![catch {package require csv}]} {
+    if {1 && ![catch {package require csv}]} {
         set cmd [list apply { {line} {::csv::split -alternate $line $::csvdelimiter $::csvquote} }]
     } else {
         set cmd [list apply { {line} {splitCsv $line $::csvdelimiter} }]
@@ -145,10 +145,17 @@ try {
         set d ""
         set s [gets $c]
         if {[regexp {^#\s*DBF\s+([^\s]+)} $s => dbfname]} {
-            set d [createByDescription $s $dbfname]
+            if {[file exists $dbfname]} {
+                error "dbf file $dbfname from header already exists"
+            } else {
+                set d [createByDescription $s $dbfname]
+            }
             if {$d eq ""} {
                 seek $c 0
             }
+        }
+        if {$dbfname eq ""} {
+            error "dbf file name missing"
         }
         if {$d eq ""} {
             set d [createBySniff $c $dbfname]
@@ -162,32 +169,42 @@ try {
         puts "created $dbfname"
     }
     set count 0
-    if {![catch {package require tclcsv}]} {
+    if {1 && ![catch {package require tclcsv}]} {
         fconfigure $c -blocking false
-        set r [::tclcsv::reader new -delimiter $::csvdelimiter -quote $::csvquote $c]
+        set r [::tclcsv::reader new -delimiter $::csvdelimiter -quote $::csvquote -comment "#" $c]
         try {
-            while {![$r eof]} {
-                $d insert end [$r next]
+            while {true} {
+                set values [$r next]
+                if {[llength $values]} {
+                    $d insert end {*}$values
+                    incr count
+                } elseif {[$r eof]} {
+                    break
+                }
             }
         } finally {
             $r destroy
         }
     } else {
-        while {[gets $c s] >= 0} {
-            set s [string trim $s]
-            if {![catch {package require csv}]} {
-               $d insert end [::csv::split -alternate $s $::csvdelimiter $::csvquote]
-            } else {
-               $d insert end [splitCsv $s $::csvdelimiter]
+        if {1 && ![catch {package require csv}]} {
+            set cmd [list apply { {line} {::csv::split -alternate $line $::csvdelimiter $::csvquote} }]
+        } else {
+            set cmd [list apply { {line} {splitCsv $line $::csvdelimiter} }]
+        }
+        while {[gets $c line] >= 0} {
+            set line [string trim $line]
+            if {[string length $line] && [string index $line 0] ne "#"} {
+                $d insert end [{*}$cmd $line]
+                incr count
             }
-            incr count
         }
     }
     puts "imported $count rows"
     $d close
     close $c
 } on error message {
-    puts stderr $message\n$::errorInfo
+    #puts stderr $message
+    puts stderr $::errorInfo
     catch {$d close}
     catch {close $c}
     exit 1
