@@ -1,6 +1,6 @@
 diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
 --- ./shapelib-orig/dbfopen.c	2024-12-21 14:33:34.041000000 +0200
-+++ ./shapelib/dbfopen.c	2024-12-28 18:23:02.997782220 +0200
++++ ./shapelib/dbfopen.c	2025-01-18 12:03:44.781013116 +0200
 @@ -169,7 +169,7 @@
                      szMessage, sizeof(szMessage),
                      "Failure seeking to position before writing DBF record %d.",
@@ -37,7 +37,33 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
              return false;
          }
  
-@@ -828,7 +828,7 @@
+@@ -368,10 +368,12 @@
+         free(pszFullname);
+         return SHPLIB_NULLPTR;
+     }
+-    psDBF->fp = psHooks->FOpen(pszFullname, pszAccess, psHooks->pvUserData);
++    psDBF->fp = psHooks->FOpen(
++        psHooks->bKeepFileExtension ? pszFilename : pszFullname,
++        pszAccess, psHooks->pvUserData);
+     memcpy(&(psDBF->sHooks), psHooks, sizeof(SAHooks));
+ 
+-    if (psDBF->fp == SHPLIB_NULLPTR)
++    if (psDBF->fp == SHPLIB_NULLPTR && !psHooks->bKeepFileExtension)
+     {
+         memcpy(pszFullname + nLenWithoutExtension, ".DBF", 5);
+         psDBF->fp =
+@@ -681,7 +683,9 @@
+     /* -------------------------------------------------------------------- */
+     /*      Create the file.                                                */
+     /* -------------------------------------------------------------------- */
+-    SAFile fp = psHooks->FOpen(pszFullname, "wb+", psHooks->pvUserData);
++    SAFile fp = psHooks->FOpen(
++         psHooks->bKeepFileExtension ? pszFilename : pszFullname,
++        "wb+", psHooks->pvUserData);
+     if (fp == SHPLIB_NULLPTR)
+     {
+         free(pszFullname);
+@@ -828,7 +832,7 @@
                   "Cannot add field %s. Header length limit reached "
                   "(max 65535 bytes, 2046 fields).",
                   pszFieldName);
@@ -46,7 +72,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
          return -1;
      }
  
-@@ -848,7 +848,7 @@
+@@ -848,7 +852,7 @@
                   "Cannot add field %s. Record length limit reached "
                   "(max 65535 bytes).",
                   pszFieldName);
@@ -55,7 +81,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
          return -1;
      }
  
-@@ -903,7 +903,7 @@
+@@ -903,7 +907,7 @@
      if (!panFieldOffsetNew || !panFieldSizeNew || !panFieldDecimalsNew ||
          !pachFieldTypeNew || !pszHeaderNew || !pszCurrentRecordNew)
      {
@@ -64,7 +90,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
          return -1;
      }
  
-@@ -914,7 +914,7 @@
+@@ -914,7 +918,7 @@
          pszRecord = STATIC_CAST(char *, malloc(psDBF->nRecordLength + nWidth));
          if (!pszRecord)
          {
@@ -73,7 +99,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
              return -1;
          }
      }
-@@ -2071,7 +2071,7 @@
+@@ -2071,7 +2075,7 @@
          free(pszHeaderNew);
          free(pszRecord);
          free(pszRecordNew);
@@ -84,7 +110,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
  
 diff -bur ./shapelib-orig/safileio.c ./shapelib/safileio.c
 --- ./shapelib-orig/safileio.c	2024-12-21 14:33:34.041000000 +0200
-+++ ./shapelib/safileio.c	2024-12-28 18:12:42.089764324 +0200
++++ ./shapelib/safileio.c	2025-01-18 10:49:48.957938758 +0200
 @@ -83,8 +83,9 @@
      return remove(filename);
  }
@@ -96,15 +122,35 @@ diff -bur ./shapelib-orig/safileio.c ./shapelib/safileio.c
      fprintf(stderr, "%s\n", message);
  }
  
+@@ -101,6 +102,7 @@
+ 
+     psHooks->Error = SADError;
+     psHooks->Atof = atof;
++    psHooks->bKeepFileExtension = 0;
+     psHooks->pvUserData = SHPLIB_NULLPTR;
+ }
+ 
+@@ -182,6 +184,7 @@
+ 
+     psHooks->Error = SADError;
+     psHooks->Atof = atof;
++    psHooks->bKeepFileExtension = 0;
+     psHooks->pvUserData = SHPLIB_NULLPTR;
+ }
+ #endif
 diff -bur ./shapelib-orig/shapefil.h ./shapelib/shapefil.h
 --- ./shapelib-orig/shapefil.h	2024-12-21 14:33:34.041000000 +0200
-+++ ./shapelib/shapefil.h	2024-12-28 18:13:30.381765716 +0200
-@@ -146,7 +146,7 @@
++++ ./shapelib/shapefil.h	2025-01-18 10:49:48.957938758 +0200
+@@ -146,8 +146,9 @@
          int (*FClose)(SAFile file);
          int (*Remove)(const char *filename, void *pvUserData);
  
 -        void (*Error)(const char *message);
 +        void (*Error)(const char *message, void *pvUserData);
          double (*Atof)(const char *str);
++        int bKeepFileExtension;
          void *pvUserData;
      } SAHooks;
+ 
+Лише у ./shapelib: shapelib.patch
+Лише у ./shapelib: shapelib.patch1

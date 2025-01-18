@@ -14,13 +14,27 @@ set simple_struct {
    {F2 Date D 8 0}
    {F3 String C 10 0}
    {F4 Integer N 9 0}
-   {F5 Double N 10 2}
+   {F5 Double N 15 2}
 }
 
 set simple_data {
    {T 20241231 {New Year 0} 1230 456.7}
    {F 20250101 {New Year 1} 1231 456.71}
 }
+
+set numeric_struct {
+   {F1 Integer N 9 0}
+   {F2 Integer N 15 0}
+   {F3 Integer N 18 0}
+   {F4 Double N 16 2}
+   {F5 Double N 19 2}
+}
+
+set numeric_data0 {{0 0 0 0.00 0.00}}
+set numeric_data1 {{987654321 543210987654321 543210987654321 5432109876543.21 5432109876543.21}}
+set numeric_data2 {{-87654321 -43210987654321 -43210987654321 -432109876543.21 -432109876543.21}}
+set numeric_data3 {{987654321 543210987654321 876543210987654321 5432109876543.21 8765432109876543.21}}
+set numeric_data4 {{-87654321 -43210987654321 -76543210987654321 -432109876543.21 -765432109876543.21}}
 
 proc dbf_create {filename struct args} {
    dbf dbf -create $filename {*}$args
@@ -409,6 +423,58 @@ test command-4.3.8 {insert long record} -setup {
    dbf_insert $d $simple_data
    list [$d record 0] [$d record 1]
 } -result [lrange $simple_data 0 end]
+
+test command-4.3.10 {insert numeric fields with 0} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] $numeric_struct
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   dbf_insert $d $numeric_data0
+   $d record 0
+} -result [lrange [lindex $numeric_data0 0] 0 end]
+
+test command-4.3.11 {insert numeric fields 64bit precision} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] $numeric_struct
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   dbf_insert $d $numeric_data1
+   $d record 0
+} -result [lrange [lindex $numeric_data1 0] 0 end]
+
+test command-4.3.12 {insert numeric fields 64bit precision negate} -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] $numeric_struct
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   dbf_insert $d $numeric_data2
+   $d record 0
+} -result [lrange [lindex $numeric_data2 0] 0 end]
+
+# NOTE: shapelib limits numerical precision to 15 digit on write
+test command-4.3.13 {insert numeric fields 64bit precision negate} -constraints shapelibFeature -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] $numeric_struct
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   dbf_insert $d $numeric_data3
+   $d record 0
+} -result [lrange [lindex $numeric_data3 0] 0 end]
+
+# NOTE: shapelib limits numerical precision to 15 digit on write
+test command-4.3.14 {insert numeric fields 64bit precision negate} -constraints shapelibFeature -setup {
+   dbf_create [file join [temporaryDirectory] test.dbf] $numeric_struct
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   dbf_insert $d $numeric_data4
+   $d record 0
+} -result [lrange [lindex $numeric_data4 0] 0 end]
 
 # get
 

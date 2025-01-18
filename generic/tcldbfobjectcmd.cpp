@@ -410,8 +410,9 @@ int TclDbfObjectCmd::Command (int objc, Tcl_Obj * const objv[]) {
 };
 
 int TclDbfObjectCmd::GetFieldValue (int rowid, int fieldid, Tcl_Obj ** valueObj) {
+  int width, prec;
   char label [XBASE_FLDNAME_LEN_READ+1];
-  DBFFieldType type = DBFGetFieldInfo(dbf, fieldid, label, NULL, NULL);
+  DBFFieldType type = DBFGetFieldInfo(dbf, fieldid, label, &width, &prec);
 
   if (DBFIsAttributeNULL(dbf, rowid, fieldid)) {
 
@@ -427,8 +428,13 @@ int TclDbfObjectCmd::GetFieldValue (int rowid, int fieldid, Tcl_Obj ** valueObj)
   
   } else if (type == FTDouble) {
   
-    *valueObj = Tcl_NewDoubleObj(DBFReadDoubleAttribute(dbf, rowid, fieldid));
-  
+    if (width > 15)
+      *valueObj = Tcl_NewStringObj(DBFReadStringAttribute(dbf, rowid, fieldid), -1);
+    else if (prec > 0)
+      *valueObj = Tcl_NewDoubleObj(DBFReadDoubleAttribute(dbf, rowid, fieldid));
+    else
+      *valueObj = Tcl_NewWideIntObj(Tcl_DoubleAsWide(DBFReadDoubleAttribute(dbf, rowid, fieldid)));
+
   } else if (type == FTInteger) {
   
     *valueObj = Tcl_NewIntObj(DBFReadIntegerAttribute(dbf, rowid, fieldid));

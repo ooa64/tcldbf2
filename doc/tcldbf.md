@@ -41,6 +41,11 @@ Compatibility mode: command returns 1 on success, 0 on failure.
 
 Returns database codepage.
 
++ **command** encoding ?*encoding*?
+
+Returns or sets currently used tcl encoding.
+Usable on dbf files without codepage specified.
+
 + **command** info ?records|fields?
 
 Returns the number of records or fields.
