@@ -515,17 +515,24 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
 
     SHPDate date;
     if (3 != sscanf(value, "%4d%2d%2d", &date.year, &date.month, &date.day)) {
-      Tcl_AppendResult(tclInterp, "expected date as YYYYMMDD but got \"", value, "\", field ", label, " row ", NULL);
-      Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
-      return TCL_ERROR;
+      if (!compatible) {
+        Tcl_AppendResult(tclInterp, "expected date as YYYYMMDD but got \"", value, "\", field ", label, " row ", NULL);
+        Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
+        return TCL_ERROR;
+      } else {
+        date.year = 0;
+        date.month = 0;
+        date.day = 0;
+      }
     }
-    // FIXME: more checks (via mktime or "clock scan")
-    if (date.month < 1 || date.month > 12 || date.day < 1 || date.day > 31) {
-      Tcl_AppendResult(tclInterp, "invalid date, field ", label, " row ", NULL);
-      Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
-      return TCL_ERROR;
+    if (!compatible) {
+      // FIXME: more checks (via mktime or "clock scan")
+      if (date.month < 1 || date.month > 12 || date.day < 1 || date.day > 31) {
+        Tcl_AppendResult(tclInterp, "invalid date, field ", label, " row ", NULL);
+        Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
+        return TCL_ERROR;
+      }
     }
-
     result = DBFWriteDateAttribute (dbf, rowid, fieldid, &date);
 
   } else if (type == FTLogical) {
