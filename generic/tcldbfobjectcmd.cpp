@@ -427,13 +427,17 @@ int TclDbfObjectCmd::GetFieldValue (int rowid, int fieldid, Tcl_Obj ** valueObj)
     *valueObj = Tcl_NewStringObj(EncodeTclString(DBFReadStringAttribute(dbf, rowid, fieldid)), -1);
   
   } else if (type == FTDouble) {
-  
-    if (width > 15)
-      *valueObj = Tcl_NewStringObj(DBFReadStringAttribute(dbf, rowid, fieldid), -1);
-    else if (prec > 0)
-      *valueObj = Tcl_NewDoubleObj(DBFReadDoubleAttribute(dbf, rowid, fieldid));
-    else
-      *valueObj = Tcl_NewWideIntObj(Tcl_DoubleAsWide(DBFReadDoubleAttribute(dbf, rowid, fieldid)));
+
+    // NOTE: let Tcl convert this to a number when needed
+    *valueObj = Tcl_NewStringObj(DBFReadStringAttribute(dbf, rowid, fieldid), -1);
+    //
+    // if (width > 15)
+    //   *valueObj = Tcl_NewStringObj(DBFReadStringAttribute(dbf, rowid, fieldid), -1);
+    // else if (prec > 0)
+    //   *valueObj = Tcl_NewDoubleObj(DBFReadDoubleAttribute(dbf, rowid, fieldid));
+    // else
+    //   *valueObj = Tcl_NewWideIntObj(Tcl_DoubleAsWide(DBFReadDoubleAttribute(dbf, rowid, fieldid)));
+    // 
 
   } else if (type == FTInteger) {
   
@@ -442,20 +446,24 @@ int TclDbfObjectCmd::GetFieldValue (int rowid, int fieldid, Tcl_Obj ** valueObj)
   } else if (type == FTDate) {
   
     // NOTE: skip double conversion
+    *valueObj = Tcl_NewStringObj(DBFReadStringAttribute(dbf, rowid, fieldid), -1);
+    //
     // SHPDate date = DBFReadDateAttribute(dbf, rowid, fieldid);
     // char value[9]; /* "yyyyMMdd\0" */
     // snprintf(value, sizeof(value), "%04d%02d%02d", date->year, date->month, date->day);
-    *valueObj = Tcl_NewStringObj(DBFReadStringAttribute(dbf, rowid, fieldid), -1);
+    // *valueObj = Tcl_NewStringObj(value, -1);
+    //
   
   } else if (type == FTLogical) {
   
     *valueObj = Tcl_NewStringObj(DBFReadLogicalAttribute(dbf, rowid, fieldid), -1);
   
   } else {
-  
-    // valueObj = Tcl_NewStringObj(DBFReadStringAttribute(dbf, rowid, fieldid), -1);
-    Tcl_AppendResult(tclInterp, "invalid data type, field ", label, NULL);
-    return TCL_ERROR;
+
+    // NOTE: allow unknowns
+    *valueObj = Tcl_NewStringObj(DBFReadStringAttribute(dbf, rowid, fieldid), -1);
+    // Tcl_AppendResult(tclInterp, "invalid data type, field ", label, NULL);
+    // return TCL_ERROR;
   }
   return TCL_OK;
 }
@@ -464,11 +472,11 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
   int result = false;
   char * value = Tcl_GetString(valueObj);
 
-  int width;
+  int width, prec;
   char label [XBASE_FLDNAME_LEN_READ+1];
-  DBFFieldType type = DBFGetFieldInfo(dbf, fieldid, label, &width, NULL);
+  DBFFieldType type = DBFGetFieldInfo(dbf, fieldid, label, &width, &prec);
 
-  if (strcmp(value, "") == 0) {
+  if (strlen(value) == 0) {
 
     result = DBFWriteNULLAttribute(dbf, rowid, fieldid);
 
@@ -478,14 +486,12 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
     Tcl_DString s;
     Tcl_DStringInit(&s);
     Tcl_UtfToExternalDString(encoding, value, -1, &s);
-    // fprintf(stderr,"encoding:%s,input:%zd,output:%zd\n", Tcl_GetEncodingName(encoding),strlen(value),strlen(Tcl_DStringValue(&s)));
     if (Tcl_DStringLength(&s) > width) {
       if (compatible) {
         // Tcl_DStringSetLength(&s, width);
       } else {
-        Tcl_AppendResult(tclInterp, "too long value, field ", label, " row ", NULL);
-        Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
-        return TCL_ERROR;
+        Tcl_DStringFree(&s);
+        return BadFieldValue(rowid, label, "too long string value");
       }
     }
     result = DBFWriteStringAttribute(dbf, rowid, fieldid, Tcl_DStringValue(&s));
@@ -493,21 +499,31 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
 
   } else if (type == FTDouble) {
 
-    double d;
-    if (Tcl_GetDoubleFromObj(tclInterp, valueObj, &d) == TCL_ERROR) {
-      Tcl_AppendResult(tclInterp, ", field ", label, " row ", NULL);
-      Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
-      return TCL_ERROR;
+    if (width <= 15 || prec != 0) {
+      double d;
+      if (Tcl_GetDoubleFromObj(tclInterp, valueObj, &d) == TCL_ERROR) {
+        return BadFieldValue(rowid, label, "");
+      }
+      result = DBFWriteDoubleAttribute (dbf, rowid, fieldid, d);
+    } else {
+      if (strlen(value) > XBASE_FLD_MAX_WIDTH) {
+        return BadFieldValue(rowid, label, "too long value");
+      }
+      const char *s = value;
+      if (*s == '-')
+        s++;
+      for (; *s; s++)
+        if (!isdigit(*s))
+          return BadFieldValue(rowid, label, "invalid integer value");
+
+      result = DBFWriteAttributeDirectly(dbf, rowid, fieldid, (void *)value);
     }
-    result = DBFWriteDoubleAttribute (dbf, rowid, fieldid, d);
 
   } else if (type == FTInteger) {
 
     int i;
     if (Tcl_GetIntFromObj(tclInterp, valueObj, &i) == TCL_ERROR) {
-      Tcl_AppendResult(tclInterp, ", field ", label, " row ", NULL);
-      Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
-      return TCL_ERROR;
+      return BadFieldValue(rowid, label, "");
     }
     result = DBFWriteIntegerAttribute (dbf, rowid, fieldid, i);
 
@@ -516,9 +532,8 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
     SHPDate date;
     if (3 != sscanf(value, "%4d%2d%2d", &date.year, &date.month, &date.day)) {
       if (!compatible) {
-        Tcl_AppendResult(tclInterp, "expected date as YYYYMMDD but got \"", value, "\", field ", label, " row ", NULL);
-        Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
-        return TCL_ERROR;
+        Tcl_AppendResult(tclInterp, "expected date as YYYYMMDD but got \"", value, "\"", NULL);
+        return BadFieldValue(rowid, label, "");
       } else {
         date.year = 0;
         date.month = 0;
@@ -528,9 +543,7 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
     if (!compatible) {
       // FIXME: more checks (via mktime or "clock scan")
       if (date.month < 1 || date.month > 12 || date.day < 1 || date.day > 31) {
-        Tcl_AppendResult(tclInterp, "invalid date, field ", label, " row ", NULL);
-        Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
-        return TCL_ERROR;
+        return BadFieldValue(rowid, label, "invalid date");
       }
     }
     result = DBFWriteDateAttribute (dbf, rowid, fieldid, &date);
@@ -538,9 +551,7 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
   } else if (type == FTLogical) {
 
     if (strlen(value) > 1) {
-      Tcl_AppendResult(tclInterp, "too long value, field ", label, " row ", NULL);
-      Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
-      return TCL_ERROR;
+      return BadFieldValue(rowid, label, "expected \"T\" or \"F\"");
     }
     result = DBFWriteLogicalAttribute (dbf, rowid, fieldid, *value);
 
@@ -551,11 +562,15 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
   }
 
   if (!result && !compatible) {
-    Tcl_AppendResult(tclInterp, "update error, field ", label, " row ", NULL);
-    Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
-    return TCL_ERROR;
+    return BadFieldValue(rowid, label, "update error");
   }
   return TCL_OK;
+}
+
+int TclDbfObjectCmd::BadFieldValue (int rowid, char *label, const char * message) {
+  Tcl_AppendResult(tclInterp, message, ", field ", label, " row ", NULL);
+  Tcl_AppendObjToObj(Tcl_GetObjResult(tclInterp), Tcl_NewIntObj(rowid));
+  return TCL_ERROR;
 }
 
 int TclDbfObjectCmd::GetRowid (Tcl_Obj * rowidObj, int * rowid) {

@@ -50,6 +50,7 @@ private:
   int GetField (Tcl_Obj * fieldObj, int index);
   int SetFieldValue (int rowid, int index, Tcl_Obj * valueObj);
   int GetFieldValue (int rowid, int index, Tcl_Obj ** valueObj);
+  int BadFieldValue (int rowid, char *label, const char * message);
   int GetRowid (Tcl_Obj * rowidObj, int * rowid);
 
   virtual int Command (int objc, Tcl_Obj * const objv[]);

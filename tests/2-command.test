@@ -18,7 +18,7 @@ set simple_struct {
 }
 
 set simple_data {
-   {T 20241231 {New Year 0} 1230 456.7}
+   {T 20241231 {New Year 0} 1230 456.70}
    {F 20250101 {New Year 1} 1231 456.71}
 }
 
@@ -235,7 +235,7 @@ test command-4.0.10 {insert S too big} -returnCodes 1 -setup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
    list [$d insert end {foofoofoofoo}] [$d record 0]
-} -result {too long value, field S row 0}
+} -result {too long string value, field S row 0}
 
 test command-4.0.11 {insert I too big} -returnCodes 1 -setup {
    set d [dbf_create_open [file join [temporaryDirectory] test.dbf] {{I - N 9 0}}]
@@ -267,31 +267,29 @@ test command-4.0.14 {insert logical too long} -returnCodes 1 -setup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
    $d insert end TT
-} -result {too long value, field L row 0}
+} -result {expected "T" or "F", field L row 0}
 
-#
-# NOTE: Insert error, but record added
-#
 test command-4.0.20 {create/setup/open/insert invalid logical/record count} -constraints shapelibFeature -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{L - L 1 0}}
    dbf d -open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+   # NOTE: Insert error, but record added
    list [$d info] [catch {$d insert end X}] [$d info]
 } -result {{0 1} 1 {0 1}}
 
-#
-# NOTE: Two assetions (msvc debug): "Flush between consecutive read and write", !stream.has_any_of(_IOREAD)
-# NOTE: No error at Tcl level
-# NOTE: Record not added 
-# 
 test command-4.0.8 {create/setup/open ro/insert} -returnCodes 1 -constraints shapelibFeature -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
    dbf d -open [file join [temporaryDirectory] test.dbf] -readonly
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+   #
+   # NOTE: Two asserts (msvc debug): "Flush between consecutive read and write", !stream.has_any_of(_IOREAD)
+   # NOTE: No error at Tcl level
+   # NOTE: Record not added 
+   # 
    list [$d insert end {foo}] [$d info]
 } -result {Failure writing DBF record 0.}
 
@@ -454,27 +452,47 @@ test command-4.3.12 {insert numeric fields 64bit precision negate} -setup {
    $d record 0
 } -result [lrange [lindex $numeric_data2 0] 0 end]
 
-# NOTE: shapelib limits numerical precision to 15 digit on write
 test command-4.3.13 {insert numeric fields 64bit precision negate} -constraints shapelibFeature -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] $numeric_struct
    dbf d -open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+   # NOTE: shapelib limits numerical precision to 15 digit on write
    dbf_insert $d $numeric_data3
    $d record 0
 } -result [lrange [lindex $numeric_data3 0] 0 end]
 
-# NOTE: shapelib limits numerical precision to 15 digit on write
 test command-4.3.14 {insert numeric fields 64bit precision negate} -constraints shapelibFeature -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] $numeric_struct
    dbf d -open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+   # NOTE: shapelib limits numerical precision to 15 digit on write
    dbf_insert $d $numeric_data4
    $d record 0
 } -result [lrange [lindex $numeric_data4 0] 0 end]
+
+test command-4.3.15 {very long integer} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+   $d add N N 255
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   $d insert 0 [expr {"[string repeat 9876543210 25]12345"}]
+   $d record 0
+} -result [list [string repeat 9876543210 25]12345]
+
+test command-4.3.16 {very long negative integer} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+   $d add N N 255
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   $d insert 0 [expr {"-[string repeat 9876543210 25]1234"}]
+   $d record 0
+} -result [list -[string repeat 9876543210 25]1234]
 
 # get
 
@@ -583,7 +601,7 @@ test command-4.7.1 {codepage/truncation} -setup {
 #
    $d add S C 10
    $d insert 0 {Йцукенгшщзх}
-} -result {too long value, field S row 0} -returnCodes 1
+} -result {too long string value, field S row 0} -returnCodes 1
 
 test command-4.7.2 {codepage/utf} -constraints {utf8 tcltestEncodingBug} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
@@ -609,7 +627,7 @@ test command-4.7.3 {codepage/utf truncated} -constraints {utf8 tcltestEncodingBu
    $d add S C 10
    $d insert 0 {Йцукен}
    list [$d codepage] [$d record 0]
-} -result {too long value, field S row 0} -returnCodes 1
+} -result {too long string value, field S row 0} -returnCodes 1
 
 test command-4.7.4 {codepage after open} -constraints tcltestEncodingBug -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf] -codepage LDID/201
