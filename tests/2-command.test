@@ -279,7 +279,7 @@ test command-4.0.20 {create/setup/open/insert invalid logical/record count} -con
    list [$d info] [catch {$d insert end X}] [$d info]
 } -result {{0 1} 1 {0 1}}
 
-test command-4.0.8 {create/setup/open ro/insert} -returnCodes 1 -constraints shapelibFeature -setup {
+test command-4.0.21 {create/setup/open ro/insert} -returnCodes 1 -constraints shapelibFeature -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
    dbf d -open [file join [temporaryDirectory] test.dbf] -readonly
 } -cleanup {
@@ -480,7 +480,7 @@ test command-4.3.15 {very long integer} -setup {
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
-   $d insert 0 [expr {"[string repeat 9876543210 25]12345"}]
+   $d insert 0 [expr {"[string repeat 9876543210 25]12345"+0}]
    $d record 0
 } -result [list [string repeat 9876543210 25]12345]
 
@@ -490,7 +490,7 @@ test command-4.3.16 {very long negative integer} -setup {
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
-   $d insert 0 [expr {"-[string repeat 9876543210 25]1234"}]
+   $d insert 0 [expr {"-[string repeat 9876543210 25]1234"+0}]
    $d record 0
 } -result [list -[string repeat 9876543210 25]1234]
 
