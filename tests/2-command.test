@@ -474,7 +474,17 @@ test command-4.3.14 {insert numeric fields 64bit precision negate} -constraints 
    $d record 0
 } -result [lrange [lindex $numeric_data4 0] 0 end]
 
-test command-4.3.15 {very long integer} -setup {
+test command-4.3.15 {very long field} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+   $d add N N 255
+} -cleanup {
+   #$d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   $d insert 0 1
+   $d record 0
+} -result {1}
+
+test command-4.3.16 {very long integer} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
    $d add N N 255
 } -cleanup {
@@ -484,7 +494,7 @@ test command-4.3.15 {very long integer} -setup {
    $d record 0
 } -result [list [string repeat 9876543210 25]12345]
 
-test command-4.3.16 {very long negative integer} -setup {
+test command-4.3.17 {very long negative integer} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
    $d add N N 255
 } -cleanup {

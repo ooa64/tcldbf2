@@ -506,7 +506,8 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
       }
       result = DBFWriteDoubleAttribute (dbf, rowid, fieldid, d);
     } else {
-      if (strlen(value) > XBASE_FLD_MAX_WIDTH) {
+      int valuelength = strlen(value);  
+      if (valuelength > XBASE_FLD_MAX_WIDTH) {
         return BadFieldValue(rowid, label, "too long value");
       }
       const char *s = value;
@@ -515,8 +516,17 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
       for (; *s; s++)
         if (!isdigit(*s))
           return BadFieldValue(rowid, label, "invalid integer value");
-
-      result = DBFWriteAttributeDirectly(dbf, rowid, fieldid, (void *)value);
+      if (valuelength < width) {
+        // FIXME: do we really need alignment?
+        // NOTE: make integer value right aligned.
+        char b[XBASE_FLD_MAX_WIDTH + 1];
+        memset(b, ' ', width - valuelength);
+        memcpy(&b[width - valuelength], value, valuelength);
+        s = b;
+      } else {
+        s = value;
+      }
+      result = DBFWriteAttributeDirectly(dbf, rowid, fieldid, (void *)s);
     }
 
   } else if (type == FTInteger) {

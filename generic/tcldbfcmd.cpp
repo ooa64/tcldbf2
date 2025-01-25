@@ -27,6 +27,7 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
     return TCL_ERROR;
   }
 
+
   DBFHandle dbf;
   SAHooks sHooks;
   SASetupDefaultHooks(&sHooks);
