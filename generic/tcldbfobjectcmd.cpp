@@ -499,34 +499,17 @@ int TclDbfObjectCmd::SetFieldValue (int rowid, int fieldid, Tcl_Obj * valueObj) 
 
   } else if (type == FTDouble) {
 
-    if (width <= 15 || prec != 0) {
+    if (width <= 15) {
       double d;
       if (Tcl_GetDoubleFromObj(tclInterp, valueObj, &d) == TCL_ERROR) {
         return BadFieldValue(rowid, label, "");
       }
       result = DBFWriteDoubleAttribute (dbf, rowid, fieldid, d);
     } else {
-      int valuelength = strlen(value);  
-      if (valuelength > XBASE_FLD_MAX_WIDTH) {
-        return BadFieldValue(rowid, label, "too long value");
-      }
-      const char *s = value;
-      if (*s == '-')
-        s++;
-      for (; *s; s++)
-        if (!isdigit(*s))
-          return BadFieldValue(rowid, label, "invalid integer value");
-      if (valuelength < width) {
-        // FIXME: do we really need alignment?
-        // NOTE: make integer value right aligned.
-        char b[XBASE_FLD_MAX_WIDTH + 1];
-        memset(b, ' ', width - valuelength);
-        memcpy(&b[width - valuelength], value, valuelength);
-        s = b;
-      } else {
-        s = value;
-      }
-      result = DBFWriteAttributeDirectly(dbf, rowid, fieldid, (void *)s);
+      char b[XBASE_FLD_MAX_WIDTH + 1];
+      if (!format_numeric(value, width, prec, b, XBASE_FLD_MAX_WIDTH + 1))
+        return BadFieldValue(rowid, label, "invalid numeric value");
+      result = DBFWriteAttributeDirectly(dbf, rowid, fieldid, (void *)b);
     }
 
   } else if (type == FTInteger) {
@@ -604,14 +587,22 @@ int TclDbfObjectCmd::AddField (Tcl_Obj * labelObj, Tcl_Obj * typeObj, Tcl_Obj * 
   }
 
   int width = 0;
-  if (Tcl_GetIntFromObj(tclInterp, widthObj, &width) == TCL_ERROR || width < 1 || width > 255) {
+  if (Tcl_GetIntFromObj(tclInterp, widthObj, &width) == TCL_ERROR) {
+    Tcl_AppendResult(tclInterp, " in place of width, field ", label, NULL);
+    return TCL_ERROR;
+  } 
+  if (width < 1 || width > 255) {
     Tcl_AppendResult(tclInterp, "invalid width, field ", label, NULL);
     return TCL_ERROR;
   }
 
   int prec  = 0;
   if (precObj) {
-    if (Tcl_GetIntFromObj(tclInterp, precObj, &prec) == TCL_ERROR || prec > width) {
+    if (Tcl_GetIntFromObj(tclInterp, precObj, &prec) == TCL_ERROR) {
+      Tcl_AppendResult(tclInterp, " in place of precision, field ", label, NULL);
+      return TCL_ERROR;
+    }
+    if (prec < 0 || prec > 0 && prec + 2 > width) {
       Tcl_AppendResult(tclInterp, "invalid precision, field ", label, NULL);
       return TCL_ERROR;
     }

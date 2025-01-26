@@ -95,12 +95,28 @@ test command-3.2.0.4 {create/setup error} -returnCodes 1 -setup {
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
+   $d add N N 2 1
+} -result {invalid precision, field N}
+
+test command-3.2.0.5 {create/setup error} -returnCodes 1 -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   $d add N N 2 x
+} -result {expected integer but got "x" in place of precision, field N}
+
+test command-3.2.0.6 {create/setup error} -returnCodes 1 -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
    for {set i 0} {$i <= 256} {incr i} {
       $d add S$i C 255
    }
 } -result {Cannot add field S256. Record length limit reached (max 65535 bytes).}
 
-test command-3.2.0.5 {fields syntax} -returnCodes 1 -setup {
+test command-3.2.0.7 {fields syntax} -returnCodes 1 -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
@@ -108,7 +124,7 @@ test command-3.2.0.5 {fields syntax} -returnCodes 1 -setup {
    $d fields foo bar
 } -result {wrong # args: should be "dbf.???? fields foo"} -match glob
 
-test command-3.2.0.6 {field unknows} -returnCodes 1 -setup {
+test command-3.2.0.8 {field unknows} -returnCodes 1 -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
@@ -452,7 +468,7 @@ test command-4.3.12 {insert numeric fields 64bit precision negate} -setup {
    $d record 0
 } -result [lrange [lindex $numeric_data2 0] 0 end]
 
-test command-4.3.13 {insert numeric fields 64bit precision negate} -constraints shapelibFeature -setup {
+test command-4.3.13 {insert numeric fields 64bit precision negate} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] $numeric_struct
    dbf d -open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
@@ -463,7 +479,7 @@ test command-4.3.13 {insert numeric fields 64bit precision negate} -constraints 
    $d record 0
 } -result [lrange [lindex $numeric_data3 0] 0 end]
 
-test command-4.3.14 {insert numeric fields 64bit precision negate} -constraints shapelibFeature -setup {
+test command-4.3.14 {insert numeric fields 64bit precision negate} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] $numeric_struct
    dbf d -open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
@@ -478,7 +494,7 @@ test command-4.3.15 {very long field} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
    $d add N N 255
 } -cleanup {
-   #$d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
    $d insert 0 1
    $d record 0
@@ -503,6 +519,89 @@ test command-4.3.17 {very long negative integer} -setup {
    $d insert 0 [expr {"-[string repeat 9876543210 25]1234"+0}]
    $d record 0
 } -result [list -[string repeat 9876543210 25]1234]
+
+test command-4.3.18 {very long field} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+   $d add N N 255 2
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   $d insert 0 1
+   $d record 0
+} -result {1.00}
+
+test command-4.3.20 {invalid long integers} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+   $d add N N 16 0
+} -cleanup {
+   unset value result
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   set result \n
+   foreach value {x 0x0 0.0 12345678901234567 -1234567890123456} {
+      append result $value : [catch {$d insert end $value} message] = $message \n
+   }
+   set result
+} -result {
+x:1=invalid numeric value, field N row 0
+0x0:1=invalid numeric value, field N row 0
+0.0:1=invalid numeric value, field N row 0
+12345678901234567:1=invalid numeric value, field N row 0
+-1234567890123456:1=invalid numeric value, field N row 0
+}
+
+test command-4.3.21 {valid long integers} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+   $d add N N 16 0
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   $d insert end 0
+   $d insert end 1
+   $d insert end 1234567890123456
+   $d insert end -123456789012345
+   $d values N
+} -result {0 1 1234567890123456 -123456789012345}
+
+test command-4.3.22 {invalid long doubles} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+   $d add N N 16 2
+} -cleanup {
+   unset value result
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   set result \n
+   foreach value {x x.0 0.x 12345678901234.56 -1234567890123.45 12345678901234 -1234567890123} {
+      append result $value : [catch {$d insert end $value} message] = $message \n
+   }
+   set result
+} -result {
+x:1=invalid numeric value, field N row 0
+x.0:1=invalid numeric value, field N row 0
+0.x:1=invalid numeric value, field N row 0
+12345678901234.56:1=invalid numeric value, field N row 0
+-1234567890123.45:1=invalid numeric value, field N row 0
+12345678901234:1=invalid numeric value, field N row 0
+-1234567890123:1=invalid numeric value, field N row 0
+}
+
+test command-4.3.23 {valid long doubles} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+   $d add N N 16 2
+} -cleanup {
+   $d forget; unset d; #file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   $d insert end 0
+   $d insert end 0.1
+   $d insert end 0.12
+   $d insert end 0.123
+   $d insert end .123
+   $d insert end 1234567890123.45
+   $d insert end -123456789012.34
+   $d insert end 1234567890123.456
+   $d insert end -123456789012.345
+   $d values N
+} -result {0.00 0.10 0.12 0.12 0.12 1234567890123.45 -123456789012.34 1234567890123.45 -123456789012.34}
 
 # get
 

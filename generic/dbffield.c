@@ -47,3 +47,55 @@ static int valid_name (const char *field_name) {
 			return 0;
 	return 1;
 }
+
+static int format_number(const char * value, int width, char * buffer, int buffer_size) {
+    const char *s = value;
+    int i = 0;
+    if (s[i] == '-')
+        i++;
+    while (i < width && isdigit(s[i]))
+    	i++;
+    if (s[i])
+        return 0;
+    memset(buffer, ' ', width - i);
+    memcpy(&buffer[width - i], value, i);
+	return 1;
+}
+
+static int format_decimal(const char * value, int width, int prec, char * buffer, int buffer_size) {
+    memset(&buffer[0], ' ', width - prec - 2);
+    memset(&buffer[width - prec - 2], '0', prec + 2);
+    buffer[width - prec - 1] = '.';
+    const char *s = value;
+    int i = 0;
+    if (s[i] == '-')
+    	i++;
+    while (i < width && isdigit(s[i]))
+        i++;
+    if (i + prec + 1 > width) 
+		return 0;
+    int pointi = i;
+    if (s[i] == '.') {
+    	i++;
+    	while (isdigit(s[i]))
+			i++;
+		if (s[i])
+			return 0;
+		if (i > pointi + prec + 1)
+			i = pointi + prec + 1	;
+	} else if (s[i])
+		return 0;
+    memcpy(&buffer[width - prec - 1 - pointi], value, i);
+	return 1;
+}
+
+static int format_numeric(const char * value, int width, int prec, char * buffer, int buffer_size) {
+	if (width >= buffer_size)
+		return 0;
+	if (width - prec < 2) 
+		return 0;
+	if (prec)
+        return format_decimal(value, width, prec, buffer, buffer_size);
+	else
+		return format_number(value, width, buffer, buffer_size);
+}
