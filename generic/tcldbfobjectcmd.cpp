@@ -602,7 +602,7 @@ int TclDbfObjectCmd::AddField (Tcl_Obj * labelObj, Tcl_Obj * typeObj, Tcl_Obj * 
       Tcl_AppendResult(tclInterp, " in place of precision, field ", label, NULL);
       return TCL_ERROR;
     }
-    if (prec < 0 || prec > 0 && prec + 2 > width) {
+    if (prec < 0 || (prec > 0 && prec + 2 > width)) {
       Tcl_AppendResult(tclInterp, "invalid precision, field ", label, NULL);
       return TCL_ERROR;
     }
