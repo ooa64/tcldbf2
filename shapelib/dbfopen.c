@@ -380,6 +380,14 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
             psDBF->sHooks.FOpen(pszFullname, pszAccess, psHooks->pvUserData);
     }
 
+    memcpy(pszFullname + nLenWithoutExtension, ".dbt", 5);
+    psDBF->memofp = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
+    if (psDBF->memofp == SHPLIB_NULLPTR)
+    {
+        memcpy(pszFullname + nLenWithoutExtension, ".DBT", 5);
+        psDBF->memofp = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
+    }
+
     memcpy(pszFullname + nLenWithoutExtension, ".cpg", 5);
     SAFile pfCPG = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
     if (pfCPG == SHPLIB_NULLPTR)
@@ -393,6 +401,8 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (psDBF->fp == SHPLIB_NULLPTR)
     {
         free(psDBF);
+        if (psDBF->memofp)
+            psHooks->FClose(psDBF->memofp);
         if (pfCPG)
             psHooks->FClose(pfCPG);
         return SHPLIB_NULLPTR;
@@ -410,6 +420,8 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (!pabyBuf)
     {
         psDBF->sHooks.FClose(psDBF->fp);
+        if (psDBF->memofp)
+            psHooks->FClose(psDBF->memofp);
         if (pfCPG)
             psHooks->FClose(pfCPG);
         free(psDBF);
@@ -418,11 +430,19 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (psDBF->sHooks.FRead(pabyBuf, XBASE_FILEHDR_SZ, 1, psDBF->fp) != 1)
     {
         psDBF->sHooks.FClose(psDBF->fp);
+        if (psDBF->memofp)
+            psDBF->sHooks.FClose(psDBF->memofp);
         if (pfCPG)
             psDBF->sHooks.FClose(pfCPG);
         free(pabyBuf);
         free(psDBF);
         return SHPLIB_NULLPTR;
+    }
+
+    psDBF->nFileType = pabyBuf[0];
+    if (psDBF->memofp && !(psDBF->nFileType == 0x83 || psDBF->nFileType == 0x83)) {
+        psDBF->sHooks.FClose(psDBF->memofp);
+        psDBF->memofp = SHPLIB_NULLPTR;
     }
 
     DBFSetLastModifiedDate(psDBF, pabyBuf[1], pabyBuf[2], pabyBuf[3]);
@@ -438,6 +458,8 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (psDBF->nRecordLength == 0 || nHeadLen < XBASE_FILEHDR_SZ)
     {
         psDBF->sHooks.FClose(psDBF->fp);
+        if (psDBF->memofp)
+            psDBF->sHooks.FClose(psDBF->memofp);
         if (pfCPG)
             psDBF->sHooks.FClose(pfCPG);
         free(pabyBuf);
@@ -453,6 +475,8 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (!psDBF->pszCurrentRecord)
     {
         psDBF->sHooks.FClose(psDBF->fp);
+        if (psDBF->memofp)
+            psDBF->sHooks.FClose(psDBF->memofp);
         if (pfCPG)
             psDBF->sHooks.FClose(pfCPG);
         free(pabyBuf);
@@ -497,6 +521,8 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (!pabyBufNew)
     {
         psDBF->sHooks.FClose(psDBF->fp);
+        if (psDBF->memofp)
+            psDBF->sHooks.FClose(psDBF->memofp);
         free(pabyBuf);
         free(psDBF->pszCurrentRecord);
         free(psDBF->pszCodePage);
@@ -511,6 +537,8 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
                             psDBF->fp) != 1)
     {
         psDBF->sHooks.FClose(psDBF->fp);
+        if (psDBF->memofp)
+            psDBF->sHooks.FClose(psDBF->memofp);
         free(pabyBuf);
         free(psDBF->pszCurrentRecord);
         free(psDBF->pszCodePage);
@@ -613,6 +641,9 @@ void SHPAPI_CALL DBFClose(DBFHandle psDBF)
     /*      Close, and free resources.                                      */
     /* -------------------------------------------------------------------- */
     psDBF->sHooks.FClose(psDBF->fp);
+
+    if (psDBF->memofp)
+        psDBF->sHooks.FClose(psDBF->memofp);
 
     if (psDBF->panFieldOffset != SHPLIB_NULLPTR)
     {
