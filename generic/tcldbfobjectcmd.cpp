@@ -37,6 +37,9 @@
   $d get $rowid ?field?
         returns a cell value for the given row or dictionary of cells
 
+  $d memo $rowid field
+        returns a memo value for the given row as a byte array
+
   $d insert $rowid|end value [value ...]
         inserts the specified values into the given record
 
@@ -82,12 +85,12 @@ TclDbfObjectCmd::~TclDbfObjectCmd () {
 int TclDbfObjectCmd::Command (int objc, Tcl_Obj * const objv[]) {
   static const char *commands[] = {
     "info", "codepage", "encoding", "add", "fields",
-    "values", "record", "get", "insert", "update",
+    "values", "record", "get", "memo", "insert", "update",
     "deleted", "forget", "close", 0L
   };
   enum commands {
     cmInfo, cmCodepage, cmEncoding, cmAdd, cmFields,
-    cmValues, cmRecord, cmGet, cmInsert, cmUpdate, 
+    cmValues, cmRecord, cmGet, cmMemo, cmInsert, cmUpdate, 
     cmDeleted, cmForget, cmClose
   };
   int index;
@@ -284,6 +287,39 @@ int TclDbfObjectCmd::Command (int objc, Tcl_Obj * const objv[]) {
           Tcl_ListObjAppendElement(tclInterp, result, value);
         }
       }
+    }
+    break;
+
+  case cmMemo:
+
+    if (objc != 4) {
+      Tcl_WrongNumArgs(tclInterp, 2, objv, "<rowid> label");
+      return TCL_ERROR;
+    } else {
+
+      int rowid;
+      if (GetRowid(objv[2], &rowid) == TCL_ERROR) {
+        return TCL_ERROR;
+      }
+      const char * label = Tcl_GetString(objv[3]);
+      int fieldid = DBFGetFieldIndex(dbf, label);
+      if (fieldid < 0) {
+        Tcl_AppendResult(tclInterp, "unknown field ", label, NULL);
+        return TCL_ERROR;
+      }
+      if (DBFGetNativeFieldType(dbf, fieldid) != 'M') {
+        Tcl_AppendResult(tclInterp, "not a memo field ", label, NULL);
+        return TCL_ERROR;
+      }
+      unsigned char fbuf[512];
+      int flen = (int)DBFReadMemoAttribute(dbf, rowid, fieldid, fbuf, 512);
+      if (flen < 0) {
+        if (CheckLastError() != TCL_ERROR) { 
+          Tcl_AppendResult(tclInterp, "error reading memo field ", label, NULL);
+        }
+        return TCL_ERROR;
+      }
+      Tcl_SetObjResult(tclInterp, Tcl_NewByteArrayObj(fbuf, flen));
     }
     break;
 

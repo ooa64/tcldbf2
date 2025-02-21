@@ -91,7 +91,7 @@ static void DBFWriteHeader(DBFHandle psDBF)
     /* -------------------------------------------------------------------- */
     /*      Initialize the file header information.                         */
     /* -------------------------------------------------------------------- */
-    abyHeader[0] = 0x03; /* memo field? - just copying */
+    abyHeader[0] = psDBF->nFileType; /* memo field? - just copying */
 
     /* write out update date */
     abyHeader[1] = STATIC_CAST(unsigned char, psDBF->nUpdateYearSince1900);
@@ -381,11 +381,11 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     }
 
     memcpy(pszFullname + nLenWithoutExtension, ".dbt", 5);
-    psDBF->memofp = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
-    if (psDBF->memofp == SHPLIB_NULLPTR)
+    SAFile pfDBT = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
+    if (pfDBT == SHPLIB_NULLPTR)
     {
         memcpy(pszFullname + nLenWithoutExtension, ".DBT", 5);
-        psDBF->memofp = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
+        pfDBT = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
     }
 
     memcpy(pszFullname + nLenWithoutExtension, ".cpg", 5);
@@ -401,13 +401,14 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (psDBF->fp == SHPLIB_NULLPTR)
     {
         free(psDBF);
-        if (psDBF->memofp)
-            psHooks->FClose(psDBF->memofp);
+        if (pfDBT)
+            psHooks->FClose(pfDBT);
         if (pfCPG)
             psHooks->FClose(pfCPG);
         return SHPLIB_NULLPTR;
     }
 
+    psDBF->memofp = pfDBT;
     psDBF->bNoHeader = FALSE;
     psDBF->nCurrentRecord = -1;
     psDBF->bCurrentRecordModified = FALSE;
@@ -440,7 +441,7 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     }
 
     psDBF->nFileType = pabyBuf[0];
-    if (psDBF->memofp && !(psDBF->nFileType == 0x83 || psDBF->nFileType == 0x83)) {
+    if (psDBF->memofp && (psDBF->nFileType & 0x80) == 0) {
         psDBF->sHooks.FClose(psDBF->memofp);
         psDBF->memofp = SHPLIB_NULLPTR;
     }
@@ -762,6 +763,8 @@ DBFHandle SHPAPI_CALL DBFCreateLL(const char *pszFilename,
 
     memcpy(&(psDBF->sHooks), psHooks, sizeof(SAHooks));
     psDBF->fp = fp;
+    psDBF->memofp = SHPLIB_NULLPTR;
+    psDBF->nFileType = 0x03;
     psDBF->nRecords = 0;
     psDBF->nFields = 0;
     psDBF->nRecordLength = 1;
@@ -1236,6 +1239,49 @@ SHPDate SHPAPI_CALL DBFReadDateAttribute(DBFHandle psDBF, int iRecord,
     }
 
     return date;
+}
+
+/************************************************************************/
+/*                        DBFReadMemoAttribute()                        */
+/*                                                                      */
+/*      Read an memo attribute.                                      */
+/************************************************************************/
+
+SAOffset DBFReadMemoAttribute(DBFHandle psDBF, int iRecord, int iField,
+                         unsigned char * pszMemoBuffer, int nMemoBufferSize)
+{
+    const char *memoValue = STATIC_CAST(
+        const char *, DBFReadAttribute(psDBF, iRecord, iField, 'M'));
+    int block = atoi(memoValue);
+    if (block > 0 && psDBF->memofp) {
+        if (psDBF->nFileType == 0x83) {
+            const SAOffset nMemoOffset = block * 512;
+            if (psDBF->sHooks.FSeek(psDBF->memofp, nMemoOffset, SEEK_SET) == 0) {
+                SAOffset nReadSize =  psDBF->sHooks.FRead(pszMemoBuffer, 1, nMemoBufferSize, psDBF->memofp);
+                if (nReadSize >= 0) {
+                    int i = 0; 
+                    while (i < nReadSize && pszMemoBuffer[i] != 0x1A)
+                        i++;
+                    return i;
+                }
+            }
+        } else if (psDBF->nFileType == 0x8B) {
+            const SAOffset nMemoOffset = block * 256;
+            if (psDBF->sHooks.FSeek(psDBF->memofp, nMemoOffset, SEEK_SET) == 0) {
+                unsigned char u[8];
+                if (psDBF->sHooks.FRead(u, 8, 1, psDBF->memofp) == 1) {
+                    if (u[0] == 0xFF && u[1] == 0xFF && u[2] == 0x08 && u[3] == 0x00) {
+                        int nMemoSize = u[4] + u[5]*0x10 + u[6]*0x100 + u[7]*0x1000 - 8;
+                        if (nMemoSize >= 0) {
+                            return psDBF->sHooks.FRead(pszMemoBuffer, 1, 
+                                                       min(nMemoSize, nMemoBufferSize), psDBF->memofp);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return -1;
 }
 
 /************************************************************************/

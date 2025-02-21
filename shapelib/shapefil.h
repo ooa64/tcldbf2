@@ -426,6 +426,10 @@ extern "C"
 
         SAFile fp;
 
+        SAFile memofp;        
+
+        unsigned char nFileType;
+       
         int nRecords;
 
         int nRecordLength; /* Must fit on uint16 */
@@ -535,6 +539,8 @@ extern "C"
         DBFReadLogicalAttribute(DBFHandle hDBF, int iShape, int iField);
     SHPDate SHPAPI_CALL DBFReadDateAttribute(DBFHandle hDBF, int iShape,
                                              int iField);
+    SAOffset DBFReadMemoAttribute(DBFHandle psDBF, int iShape, int iField,
+                                  unsigned char * pszMemoBuffer, int nMemoBufferSize);
     int SHPAPI_CALL DBFIsAttributeNULL(const DBFHandle hDBF, int iShape,
                                        int iField);
 
