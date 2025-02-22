@@ -541,7 +541,7 @@ extern "C"
     SHPDate SHPAPI_CALL DBFReadDateAttribute(DBFHandle hDBF, int iShape,
                                              int iField);
     SAOffset DBFReadMemoAttribute(DBFHandle psDBF, int iShape, int iField,
-                                  unsigned char * pszMemoBuffer, int nMemoBufferSize);
+                                  unsigned char * pszMemoBuffer, SAOffset nMemoBufferSize);
     int SHPAPI_CALL DBFIsAttributeNULL(const DBFHandle hDBF, int iShape,
                                        int iField);
 

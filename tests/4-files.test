@@ -74,6 +74,9 @@ foreach {f c r} [list \
     } -cleanup {
         $d forget; unset d
     } -body {
+# 
+# NOTE: tcltest 2.2.5 encoding bug in runAllProcs
+#
         list [$d record 0] [$d record [expr {[$d info records]-1}]]
     } -result $r
     unset f r

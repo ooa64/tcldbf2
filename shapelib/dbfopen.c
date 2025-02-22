@@ -381,11 +381,11 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     }
 
     memcpy(pszFullname + nLenWithoutExtension, ".dbt", 5);
-    SAFile pfDBT = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
+    SAFile pfDBT = psHooks->FOpen(pszFullname, "rb", psHooks->pvUserData);
     if (pfDBT == SHPLIB_NULLPTR)
     {
         memcpy(pszFullname + nLenWithoutExtension, ".DBT", 5);
-        pfDBT = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
+        pfDBT = psHooks->FOpen(pszFullname, "rb", psHooks->pvUserData);
     }
 
     memcpy(pszFullname + nLenWithoutExtension, ".cpg", 5);
@@ -1260,7 +1260,7 @@ SHPDate SHPAPI_CALL DBFReadDateAttribute(DBFHandle psDBF, int iRecord,
 /************************************************************************/
 
 SAOffset DBFReadMemoAttribute(DBFHandle psDBF, int iRecord, int iField,
-                         unsigned char * pszMemoBuffer, int nMemoBufferSize)
+                         unsigned char * pszMemoBuffer, SAOffset nMemoBufferSize)
 {
     const char *memoValue = STATIC_CAST(
         const char *, DBFReadAttribute(psDBF, iRecord, iField, 'M'));
@@ -1284,7 +1284,7 @@ SAOffset DBFReadMemoAttribute(DBFHandle psDBF, int iRecord, int iField,
                 unsigned char u[8];
                 if (psDBF->sHooks.FRead(u, 8, 1, psDBF->memofp) == 1) {
                     if (u[0] == 0xFF && u[1] == 0xFF && u[2] == 0x08 && u[3] == 0x00) {
-                        unsigned nMemoSize = u[4] | (u[5] << 8) | (u[6] << 16) | (u[7] << 24);
+                        SAOffset nMemoSize = u[4] | (u[5] << 8) | (u[6] << 16) | (u[7] << 24);
                         if (nMemoSize >= 8) {
                             nMemoSize -= 8;
                             if (nMemoSize > nMemoBufferSize)
