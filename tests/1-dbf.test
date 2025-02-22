@@ -2,6 +2,9 @@ package require tcldbf 2.0.1-
 package require tcltest
 namespace import ::tcltest::*
 
+testConstraint dbasefiles [file exist [file join [testsDirectory] dbasefiles t1 With_data T1.DBF]]
+testConstraint fixtures [file exist [file join [testsDirectory] fixtures cp1251.dbf]]
+
 proc dbf_create {filename struct args} {
    dbf dbf -create $filename {*}$args
    foreach l $struct {
@@ -152,5 +155,64 @@ test dbf-7.2 {create/open with custom ext} -setup {
 } -body {
    dbf d -open [file join [temporaryDirectory] test.foo]
 } -result {dbf.????} -match glob
+
+# open external samlpes
+
+foreach {f p} {
+    t1 With_data/T1 
+    t2 With_data/T2 
+    t3 with_data/t3 
+    t4 with_data/T4
+    t5 with_data/T5
+    t6 with_data/t6
+} {
+    test dbf-10.dbasefiles/$f "open dbf dbasefiles/$f" -constraints dbasefiles -cleanup {
+        $d forget; unset d
+    } -body {
+        dbf d -open [file join [testsDirectory] dbasefiles $f $p.DBF]
+    } -result {dbf.????} -match glob
+    unset f p
+}
+
+#                           excel          cdbf           stackoverflow
+# cp1251.dbf                invald ext     Visual FoxPro
+# dbase_02.dbf              unknown format ~=
+# dbase_03.dbf              open           dBase III      dBase III without memo file
+# dbase_03_cyrillic.dbf     open           dBase III      dBase III without memo file (UTF-8)
+# dbase_8b.dbf              open           dBase IV       dBase IV with memo file
+# dbase_8c.dbf              invalid ext    ~=
+# dbase_30.dbf              invalid ext    Visual FoxPro  Visual FoxPro
+# dbase_31.dbf              invalid ext    Visual FoxPro  Visual FoxPro with AutoIncrement field
+# dbase_32.dbf              invalid ext    Visual FoxPro
+# dbase_83.dbf              open           dBase III      dBase III with memo file
+# dbase_83_missing_memo.dbf open           dBase III
+# dbase_f5.dbf              open           FoxPro         FoxPro with memo file
+# polygon.dbf               open           Invalid header
+
+# dbase_02.dbf - invalid nHeadLen (header bytes 8,9)
+# dbase_8c.dbf - invalid panFieldOffset+panFieldSize > nRecordLength
+
+foreach {f c} {
+    cp1251.dbf                    0
+    dbase_02.dbf                  1
+    dbase_03.dbf                  0
+    dbase_03_cyrillic.dbf         0
+    dbase_8b.dbf                  0
+    dbase_8c.dbf                  1
+    dbase_30.dbf                  0
+    dbase_31.dbf                  0
+    dbase_32.dbf                  0
+    dbase_83.dbf                  0
+    dbase_83_missing_memo.dbf     0
+    dbase_f5.dbf                  0
+    polygon.dbf                   0
+} {
+    test dbf-11.fixtures/$f "open dbf fixtures/$f" -constraints fixtures -cleanup {
+        catch {$d forget; unset d}
+    } -body {
+        catch {dbf d -open [file join [testsDirectory] fixtures $f]}
+    } -result $c
+    unset f c
+}
 
 cleanupTests

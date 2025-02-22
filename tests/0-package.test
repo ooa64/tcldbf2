@@ -33,7 +33,7 @@ test package-1.2 "load package twice" -body {
 test package-1.3 "load package, different names" -body {
     run {package require tcldbf}
     run {package require dbf}
-} -result {file "*" is already loaded for package "Tcldbf"} -match glob
+} -result {file "*" is already loaded for * "Tcldbf"} -match glob
 
 test package-1.4 "load package into different interps" -body {
     package require tcldbf

@@ -177,6 +177,12 @@ If the optional parameter is not specified, returns a list of all field descript
 <p>Returns a cell value for the given row or dictionary of cells</p>
 
 <ul>
+<li><strong>command</strong> memo <em>rowid</em> <em>label</em>
+</li></ul>
+
+<p>Returns a memo value for the given row as a byte array</p>
+
+<ul>
 <li><strong>command</strong> values <em>label</em>
 </li></ul>
 
@@ -231,6 +237,12 @@ If the optional parameter is not specified, returns a list of all field descript
     <td style="text-align: left">String</td>
     <td style="text-align: center">C</td>
     <td style="text-align: left">1-255</td>
+    <td style="text-align: left">0</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">String</td>
+    <td style="text-align: center">M</td>
+    <td style="text-align: left">10</td>
     <td style="text-align: left">0</td>
   </tr>
   <tr>
@@ -596,6 +608,11 @@ If the optional parameter is not specified, returns a list of all field descript
     <td style="text-align: left">cp1257</td>
     <td style="text-align: center">204</td>
     <td style="text-align: left">Baltic Windows</td>
+  </tr>
+  <tr>
+    <td style="text-align: left">utf-8</td>
+    <td style="text-align: center">240</td>
+    <td style="text-align: left">utf-8</td>
   </tr>
 </tbody>
 </table>

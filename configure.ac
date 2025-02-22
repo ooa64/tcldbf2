@@ -19,7 +19,7 @@ dnl	to configure the system for the local environment.
 # so that we create the export library with the dll.
 #-----------------------------------------------------------------------
 
-AC_INIT([tcldbf],[2.0.4])
+AC_INIT([tcldbf],[2.1.0])
 
 PACKAGE_NAME2="dbf"
 PACKAGE_VERSION2="1.3.9"

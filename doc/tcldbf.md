@@ -71,6 +71,10 @@ Compatibility mode: all returned values are strings.
 
 Returns a cell value for the given row or dictionary of cells
 
++ **command** memo *rowid* *label*
+
+Returns a memo value for the given row as a byte array
+
 + **command** values *label*
 
 Returns a list of values of the field $name
@@ -105,6 +109,7 @@ Compatibility mode: returns "1".
 | Type     | Nativetype  | Width | Prec     |
 |:---------|:-----------:|:------|:---------|
 | String   |     C       | 1-255 | 0        |
+| String   |     M       | 10    | 0        |
 | Integer  |     N,F     | 1-9   | 0        |
 | Double   |     N,F     | 1-255 | 1..width |
 | Logical  |     L       | 1     | 0        |
@@ -179,3 +184,4 @@ Compatibility mode: returns "1".
 | cp1254	| 202	| Turkish Windows		|
 | cp1253	| 203	| Greek Windows			|
 | cp1257	| 204	| Baltic Windows		|
+| utf-8     | 240   | utf-8                 |

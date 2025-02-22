@@ -27,7 +27,13 @@ try {
         set row [expr {int([$d info records]/2)}]
         puts Sample\ #$row:
         foreach f [$d fields] v [$d record $row] {
-            puts [format "\t%-10s\t%s" [lindex $f 0] $v]
+            if {[lindex $f 2] eq "M"} {
+                catch {$d memo $row [lindex $f 0]} m
+                set m [encoding convertfrom [$d encoding] $m]
+                puts [format "\t%-10s\t%s:\t%s" [lindex $f 0] $v $m]
+            } else {
+                puts [format "\t%-10s\t%s" [lindex $f 0] $v]
+            }
         }
     }
     $d close

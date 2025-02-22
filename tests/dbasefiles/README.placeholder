@@ -1,0 +1,3 @@
+Stolen from https://sourceforge.net/projects/xdb
+
+rsync -ai a.cvs.sourceforge.net::cvsroot/xdb/xdb/libtest/dbasefiles .

@@ -441,9 +441,21 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     }
 
     psDBF->nFileType = pabyBuf[0];
-    if (psDBF->memofp && (psDBF->nFileType & 0x80) == 0) {
-        psDBF->sHooks.FClose(psDBF->memofp);
-        psDBF->memofp = SHPLIB_NULLPTR;
+    psDBF->nMemoBlockSize = 0;
+    if (psDBF->memofp) {
+        unsigned char buf[32];
+        if (psDBF->sHooks.FRead(buf, 32, 1, psDBF->memofp) == 1) {
+            if (psDBF->nFileType == 0x83) {
+                // FIXME: check if (buf[16] == 0 || buf[16] == 3) ?
+                psDBF->nMemoBlockSize = 512;
+            } else if (psDBF->nFileType == 0x8B && buf[16] == 0) {
+                psDBF->nMemoBlockSize = buf[20] | (buf[21] << 8);
+            }
+        }
+        if (psDBF->nMemoBlockSize == 0) {
+            psDBF->sHooks.FClose(psDBF->memofp);
+            psDBF->memofp = SHPLIB_NULLPTR;
+        }
     }
 
     DBFSetLastModifiedDate(psDBF, pabyBuf[1], pabyBuf[2], pabyBuf[3]);
@@ -1253,28 +1265,32 @@ SAOffset DBFReadMemoAttribute(DBFHandle psDBF, int iRecord, int iField,
     const char *memoValue = STATIC_CAST(
         const char *, DBFReadAttribute(psDBF, iRecord, iField, 'M'));
     int block = atoi(memoValue);
+    if (block == 0)
+        return 0;
     if (block > 0 && psDBF->memofp) {
-        if (psDBF->nFileType == 0x83) {
-            const SAOffset nMemoOffset = block * 512;
-            if (psDBF->sHooks.FSeek(psDBF->memofp, nMemoOffset, SEEK_SET) == 0) {
-                SAOffset nReadSize =  psDBF->sHooks.FRead(pszMemoBuffer, 1, nMemoBufferSize, psDBF->memofp);
+        const SAOffset nMemoOffset = block * psDBF->nMemoBlockSize;
+        if (psDBF->sHooks.FSeek(psDBF->memofp, nMemoOffset, SEEK_SET) == 0) {
+            if (psDBF->nFileType == 0x83) {
+                SAOffset nReadSize =  psDBF->sHooks.FRead(pszMemoBuffer, 1,
+                                                          nMemoBufferSize, psDBF->memofp);
                 if (nReadSize >= 0) {
-                    int i = 0; 
+                    int i = 0;
+                    // FIXME: check for second 0x1A (?)
                     while (i < nReadSize && pszMemoBuffer[i] != 0x1A)
                         i++;
                     return i;
                 }
-            }
-        } else if (psDBF->nFileType == 0x8B) {
-            const SAOffset nMemoOffset = block * 256;
-            if (psDBF->sHooks.FSeek(psDBF->memofp, nMemoOffset, SEEK_SET) == 0) {
+            } else if (psDBF->nFileType == 0x8B) {
                 unsigned char u[8];
                 if (psDBF->sHooks.FRead(u, 8, 1, psDBF->memofp) == 1) {
                     if (u[0] == 0xFF && u[1] == 0xFF && u[2] == 0x08 && u[3] == 0x00) {
-                        int nMemoSize = u[4] + u[5]*0x10 + u[6]*0x100 + u[7]*0x1000 - 8;
-                        if (nMemoSize >= 0) {
+                        unsigned nMemoSize = u[4] | (u[5] << 8) | (u[6] << 16) | (u[7] << 24);
+                        if (nMemoSize >= 8) {
+                            nMemoSize -= 8;
+                            if (nMemoSize > nMemoBufferSize)
+                                nMemoSize = nMemoBufferSize;
                             return psDBF->sHooks.FRead(pszMemoBuffer, 1, 
-                                                       min(nMemoSize, nMemoBufferSize), psDBF->memofp);
+                                                       nMemoSize, psDBF->memofp);
                         }
                     }
                 }

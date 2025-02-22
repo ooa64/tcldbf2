@@ -293,7 +293,7 @@ int TclDbfObjectCmd::Command (int objc, Tcl_Obj * const objv[]) {
   case cmMemo:
 
     if (objc != 4) {
-      Tcl_WrongNumArgs(tclInterp, 2, objv, "<rowid> label");
+      Tcl_WrongNumArgs(tclInterp, 2, objv, "<rowid> <label>");
       return TCL_ERROR;
     } else {
 
@@ -330,7 +330,7 @@ int TclDbfObjectCmd::Command (int objc, Tcl_Obj * const objv[]) {
       return TCL_ERROR;
     } else {
 
-      int vobjc;
+      Tcl_Size vobjc;
       Tcl_Obj ** vobjv;
       if (objc == 4 && objv[3]->typePtr && objv[3]->typePtr->name &&
           strcmp(objv[3]->typePtr->name, "list") == 0) {

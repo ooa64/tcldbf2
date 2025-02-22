@@ -1,0 +1,53 @@
+Valid dBASE for DOS file;
+bits 0-2 indicate version number,
+bit 3 indicates the presence of a dBASE for DOS memo file,
+bits 4-6 indicate the presence of a SQL table,
+bit 7 indicates the presence of any memo file (either dBASE m PLUS or dBASE for DOS)
+
+Byte	Bits		Version
+0x02	0000 0010	FoxBase 1.0
+0x03	0000 0011	FoxBase 2.x / dBASE III
+0x83	1000 0011	FoxBase 2.x / dBASE III with memo file
+0x30	0011 0000	Visual FoxPro
+0x31	0011 0001	Visual FoxPro with auto increment
+0x32	0011 0010	Visual FoxPro with varchar/varbinary
+0x43	0100 0011	dBASE IV SQL Table, no memo file
+0x63	0110 0011	dBASE IV SQL System, no memo file
+0x8b	1000 1011	dBASE IV with memo file
+0xcb	1100 1011	dBASE IV SQL Table with memo file
+0xfb	1111 1011	FoxPro 2
+0xf5	1111 0101	FoxPro 2 with memo file
+
+DBS samples
+
+dbase_03.dbf        dBase III without memo file
+dbase_30.dbf        Visual FoxPro
+dbase_31.dbf        Visual FoxPro with AutoIncrement field
+dbase_83.dbf        dBase III with memo file
+dbase_8b.dbf        dBase IV with memo file
+dbase_f5.dbf        FoxPro with memo file
+
+You can find them all here:
+
+https://github.com/infused/dbf/tree/master/spec/fixtures
+
+Copyright (c) 2006-2023 Keith Morrison <keithm@infused.org>
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

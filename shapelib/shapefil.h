@@ -429,6 +429,7 @@ extern "C"
         SAFile memofp;        
 
         unsigned char nFileType;
+        unsigned int nMemoBlockSize;
        
         int nRecords;
 

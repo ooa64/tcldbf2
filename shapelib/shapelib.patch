@@ -1,6 +1,15 @@
 diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
 --- ./shapelib-orig/dbfopen.c	2024-12-21 14:33:34.041000000 +0200
-+++ ./shapelib/dbfopen.c	2025-01-18 12:03:44.781013116 +0200
++++ ./shapelib/dbfopen.c	2025-02-22 15:59:11.713313790 +0200
+@@ -91,7 +91,7 @@
+     /* -------------------------------------------------------------------- */
+     /*      Initialize the file header information.                         */
+     /* -------------------------------------------------------------------- */
+-    abyHeader[0] = 0x03; /* memo field? - just copying */
++    abyHeader[0] = psDBF->nFileType; /* memo field? - just copying */
+ 
+     /* write out update date */
+     abyHeader[1] = STATIC_CAST(unsigned char, psDBF->nUpdateYearSince1900);
 @@ -169,7 +169,7 @@
                      szMessage, sizeof(szMessage),
                      "Failure seeking to position before writing DBF record %d.",
@@ -37,7 +46,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
              return false;
          }
  
-@@ -368,10 +368,12 @@
+@@ -368,16 +368,26 @@
          free(pszFullname);
          return SHPLIB_NULLPTR;
      }
@@ -52,7 +61,125 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
      {
          memcpy(pszFullname + nLenWithoutExtension, ".DBF", 5);
          psDBF->fp =
-@@ -681,7 +683,9 @@
+             psDBF->sHooks.FOpen(pszFullname, pszAccess, psHooks->pvUserData);
+     }
+ 
++    memcpy(pszFullname + nLenWithoutExtension, ".dbt", 5);
++    SAFile pfDBT = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
++    if (pfDBT == SHPLIB_NULLPTR)
++    {
++        memcpy(pszFullname + nLenWithoutExtension, ".DBT", 5);
++        pfDBT = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
++    }
++
+     memcpy(pszFullname + nLenWithoutExtension, ".cpg", 5);
+     SAFile pfCPG = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
+     if (pfCPG == SHPLIB_NULLPTR)
+@@ -391,11 +401,14 @@
+     if (psDBF->fp == SHPLIB_NULLPTR)
+     {
+         free(psDBF);
++        if (pfDBT)
++            psHooks->FClose(pfDBT);
+         if (pfCPG)
+             psHooks->FClose(pfCPG);
+         return SHPLIB_NULLPTR;
+     }
+ 
++    psDBF->memofp = pfDBT;
+     psDBF->bNoHeader = FALSE;
+     psDBF->nCurrentRecord = -1;
+     psDBF->bCurrentRecordModified = FALSE;
+@@ -408,6 +421,8 @@
+     if (!pabyBuf)
+     {
+         psDBF->sHooks.FClose(psDBF->fp);
++        if (psDBF->memofp)
++            psHooks->FClose(psDBF->memofp);
+         if (pfCPG)
+             psHooks->FClose(pfCPG);
+         free(psDBF);
+@@ -416,6 +431,8 @@
+     if (psDBF->sHooks.FRead(pabyBuf, XBASE_FILEHDR_SZ, 1, psDBF->fp) != 1)
+     {
+         psDBF->sHooks.FClose(psDBF->fp);
++        if (psDBF->memofp)
++            psDBF->sHooks.FClose(psDBF->memofp);
+         if (pfCPG)
+             psDBF->sHooks.FClose(pfCPG);
+         free(pabyBuf);
+@@ -423,6 +440,24 @@
+         return SHPLIB_NULLPTR;
+     }
+ 
++    psDBF->nFileType = pabyBuf[0];
++    psDBF->nMemoBlockSize = 0;
++    if (psDBF->memofp) {
++        unsigned char buf[32];
++        if (psDBF->sHooks.FRead(buf, 32, 1, psDBF->memofp) == 1) {
++            if (psDBF->nFileType == 0x83) {
++                // FIXME: check if (buf[16] == 0 || buf[16] == 3) ?
++                psDBF->nMemoBlockSize = 512;
++            } else if (psDBF->nFileType == 0x8B && buf[16] == 0) {
++                psDBF->nMemoBlockSize = buf[20] | (buf[21] << 8);
++            }
++        }
++        if (psDBF->nMemoBlockSize == 0) {
++            psDBF->sHooks.FClose(psDBF->memofp);
++            psDBF->memofp = SHPLIB_NULLPTR;
++        }
++    }
++
+     DBFSetLastModifiedDate(psDBF, pabyBuf[1], pabyBuf[2], pabyBuf[3]);
+ 
+     psDBF->nRecords = pabyBuf[4] | (pabyBuf[5] << 8) | (pabyBuf[6] << 16) |
+@@ -436,6 +471,8 @@
+     if (psDBF->nRecordLength == 0 || nHeadLen < XBASE_FILEHDR_SZ)
+     {
+         psDBF->sHooks.FClose(psDBF->fp);
++        if (psDBF->memofp)
++            psDBF->sHooks.FClose(psDBF->memofp);
+         if (pfCPG)
+             psDBF->sHooks.FClose(pfCPG);
+         free(pabyBuf);
+@@ -451,6 +488,8 @@
+     if (!psDBF->pszCurrentRecord)
+     {
+         psDBF->sHooks.FClose(psDBF->fp);
++        if (psDBF->memofp)
++            psDBF->sHooks.FClose(psDBF->memofp);
+         if (pfCPG)
+             psDBF->sHooks.FClose(pfCPG);
+         free(pabyBuf);
+@@ -495,6 +534,8 @@
+     if (!pabyBufNew)
+     {
+         psDBF->sHooks.FClose(psDBF->fp);
++        if (psDBF->memofp)
++            psDBF->sHooks.FClose(psDBF->memofp);
+         free(pabyBuf);
+         free(psDBF->pszCurrentRecord);
+         free(psDBF->pszCodePage);
+@@ -509,6 +550,8 @@
+                             psDBF->fp) != 1)
+     {
+         psDBF->sHooks.FClose(psDBF->fp);
++        if (psDBF->memofp)
++            psDBF->sHooks.FClose(psDBF->memofp);
+         free(pabyBuf);
+         free(psDBF->pszCurrentRecord);
+         free(psDBF->pszCodePage);
+@@ -612,6 +655,9 @@
+     /* -------------------------------------------------------------------- */
+     psDBF->sHooks.FClose(psDBF->fp);
+ 
++    if (psDBF->memofp)
++        psDBF->sHooks.FClose(psDBF->memofp);
++
+     if (psDBF->panFieldOffset != SHPLIB_NULLPTR)
+     {
+         free(psDBF->panFieldOffset);
+@@ -681,7 +727,9 @@
      /* -------------------------------------------------------------------- */
      /*      Create the file.                                                */
      /* -------------------------------------------------------------------- */
@@ -63,7 +190,16 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
      if (fp == SHPLIB_NULLPTR)
      {
          free(pszFullname);
-@@ -828,7 +832,7 @@
+@@ -727,6 +775,8 @@
+ 
+     memcpy(&(psDBF->sHooks), psHooks, sizeof(SAHooks));
+     psDBF->fp = fp;
++    psDBF->memofp = SHPLIB_NULLPTR;
++    psDBF->nFileType = 0x03;
+     psDBF->nRecords = 0;
+     psDBF->nFields = 0;
+     psDBF->nRecordLength = 1;
+@@ -828,7 +878,7 @@
                   "Cannot add field %s. Header length limit reached "
                   "(max 65535 bytes, 2046 fields).",
                   pszFieldName);
@@ -72,7 +208,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
          return -1;
      }
  
-@@ -848,7 +852,7 @@
+@@ -848,7 +898,7 @@
                   "Cannot add field %s. Record length limit reached "
                   "(max 65535 bytes).",
                   pszFieldName);
@@ -81,7 +217,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
          return -1;
      }
  
-@@ -903,7 +907,7 @@
+@@ -903,7 +953,7 @@
      if (!panFieldOffsetNew || !panFieldSizeNew || !panFieldDecimalsNew ||
          !pachFieldTypeNew || !pszHeaderNew || !pszCurrentRecordNew)
      {
@@ -90,7 +226,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
          return -1;
      }
  
-@@ -914,7 +918,7 @@
+@@ -914,7 +964,7 @@
          pszRecord = STATIC_CAST(char *, malloc(psDBF->nRecordLength + nWidth));
          if (!pszRecord)
          {
@@ -99,7 +235,61 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
              return -1;
          }
      }
-@@ -2071,7 +2075,7 @@
+@@ -1204,6 +1254,53 @@
+ }
+ 
+ /************************************************************************/
++/*                        DBFReadMemoAttribute()                        */
++/*                                                                      */
++/*      Read an memo attribute.                                      */
++/************************************************************************/
++
++SAOffset DBFReadMemoAttribute(DBFHandle psDBF, int iRecord, int iField,
++                         unsigned char * pszMemoBuffer, int nMemoBufferSize)
++{
++    const char *memoValue = STATIC_CAST(
++        const char *, DBFReadAttribute(psDBF, iRecord, iField, 'M'));
++    int block = atoi(memoValue);
++    if (block == 0)
++        return 0;
++    if (block > 0 && psDBF->memofp) {
++        const SAOffset nMemoOffset = block * psDBF->nMemoBlockSize;
++        if (psDBF->sHooks.FSeek(psDBF->memofp, nMemoOffset, SEEK_SET) == 0) {
++            if (psDBF->nFileType == 0x83) {
++                SAOffset nReadSize =  psDBF->sHooks.FRead(pszMemoBuffer, 1,
++                                                          nMemoBufferSize, psDBF->memofp);
++                if (nReadSize >= 0) {
++                    int i = 0;
++                    // FIXME: check for second 0x1A (?)
++                    while (i < nReadSize && pszMemoBuffer[i] != 0x1A)
++                        i++;
++                    return i;
++                }
++            } else if (psDBF->nFileType == 0x8B) {
++                unsigned char u[8];
++                if (psDBF->sHooks.FRead(u, 8, 1, psDBF->memofp) == 1) {
++                    if (u[0] == 0xFF && u[1] == 0xFF && u[2] == 0x08 && u[3] == 0x00) {
++                        unsigned nMemoSize = u[4] | (u[5] << 8) | (u[6] << 16) | (u[7] << 24);
++                        if (nMemoSize >= 8) {
++                            nMemoSize -= 8;
++                            if (nMemoSize > nMemoBufferSize)
++                                nMemoSize = nMemoBufferSize;
++                            return psDBF->sHooks.FRead(pszMemoBuffer, 1, 
++                                                       nMemoSize, psDBF->memofp);
++                        }
++                    }
++                }
++            }
++        }
++    }
++    return -1;
++}
++
++/************************************************************************/
+ /*                         DBFIsValueNULL()                             */
+ /*                                                                      */
+ /*      Return TRUE if the passed string is NULL.                       */
+@@ -2071,7 +2168,7 @@
          free(pszHeaderNew);
          free(pszRecord);
          free(pszRecordNew);
@@ -140,7 +330,7 @@ diff -bur ./shapelib-orig/safileio.c ./shapelib/safileio.c
  #endif
 diff -bur ./shapelib-orig/shapefil.h ./shapelib/shapefil.h
 --- ./shapelib-orig/shapefil.h	2024-12-21 14:33:34.041000000 +0200
-+++ ./shapelib/shapefil.h	2025-01-18 10:49:48.957938758 +0200
++++ ./shapelib/shapefil.h	2025-02-22 15:54:38.533307679 +0200
 @@ -146,8 +146,9 @@
          int (*FClose)(SAFile file);
          int (*Remove)(const char *filename, void *pvUserData);
@@ -152,5 +342,24 @@ diff -bur ./shapelib-orig/shapefil.h ./shapelib/shapefil.h
          void *pvUserData;
      } SAHooks;
  
-Лише у ./shapelib: shapelib.patch
-Лише у ./shapelib: shapelib.patch1
+@@ -425,6 +426,11 @@
+ 
+         SAFile fp;
+ 
++        SAFile memofp;        
++
++        unsigned char nFileType;
++        unsigned int nMemoBlockSize;
++       
+         int nRecords;
+ 
+         int nRecordLength; /* Must fit on uint16 */
+@@ -534,6 +540,8 @@
+         DBFReadLogicalAttribute(DBFHandle hDBF, int iShape, int iField);
+     SHPDate SHPAPI_CALL DBFReadDateAttribute(DBFHandle hDBF, int iShape,
+                                              int iField);
++    SAOffset DBFReadMemoAttribute(DBFHandle psDBF, int iShape, int iField,
++                                  unsigned char * pszMemoBuffer, int nMemoBufferSize);
+     int SHPAPI_CALL DBFIsAttributeNULL(const DBFHandle hDBF, int iShape,
+                                        int iField);
+ 
