@@ -16,6 +16,12 @@
 #   define STUB_VERSION "9.0"
 #endif
 
+#ifndef TCL_SIZE_MAX
+#   define Tcl_GetSizeIntFromObj Tcl_GetIntFromObj
+#   define TCL_SIZE_MAX INT_MAX
+#   define TCL_SIZE_MODIFIER ""
+#endif
+
 // Common TclCmd ancestor to all objects. This defines
 // common destructing and command dispatching methods.
 
