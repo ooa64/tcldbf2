@@ -1,9 +1,10 @@
 package require tcldbf 2.0.1-
-package require tcltest
+package require tcltest 2.5.8-
 namespace import ::tcltest::*
 
 testConstraint dbasefiles [file exist [file join [testsDirectory] dbasefiles t1 With_data T1.DBF]]
 testConstraint fixtures [file exist [file join [testsDirectory] fixtures cp1251.dbf]]
+testConstraint dbt [package vsatisfies [package require tcldbf] 2.1]
 
 # open external samlpes
 
@@ -31,7 +32,7 @@ foreach {f p r} [list \
     t5 with_data/T5 [list "First memo\x0D\x0A" {Second memo} {}] \
     t6 with_data/t6 [list "First memo\x0D\x0A" {Second memo} {}] \
 ] {
-    test files-2.dbasefiles/$f "read dbf memos for dbasefiles/$f" -constraints dbasefiles -setup {
+    test files-2.dbasefiles/$f "read dbf memos for dbasefiles/$f" -constraints {dbasefiles dbt} -setup {
         dbf d -open [file join [testsDirectory] dbasefiles $f $p.DBF]
     } -cleanup {
         $d forget; unset d
@@ -57,9 +58,7 @@ foreach {f p r} [list \
 # polygon.dbf               open           Invalid header
 
 foreach {f c r} [list \
-    cp1251.dbf                  1  [list {1 амбулаторно-поликлиническое} {4 {образовательное медицинское учреждение}}] \
     dbase_03.dbf                1  [list {0507121 CMP circular 12 {} no Good {} 20050712 10:56:30am 5.2 2.0 {Postprocessed Code} GeoXT 20050712 10:56:52am New Driveway 050712TR2819.cor 2 2 MS4 1331 226625.000 1131.323 3.1 1.3 0.897088 557904.898 2212577.192 401} {05071236 CMP circular 12 {} no Plugged {} 20050712 01:08:40pm 3.3 1.6 {Postprocessed Code} GeoXT 20050712 01:08:42pm New Driveway 050712TR2819.cor 1 1 MS4 1331 234535.000 1125.517 1.8 1.2 {} 559195.031 2213046.199 436}] \
-    dbase_03_cyrillic.dbf       1  [list {Номер 36.30} {Культ 99.99}] \
     dbase_8b.dbf                1  [list {One 1.00 19700101 Y 1.234567890123460000 1} {{Ten records stored in this database} 10.00 {} {} 0.100000000000000000 {}}] \
     dbase_30.dbf                0  [list {1999.1 {} {} {} {File Cabinet 2} {Ear & Ernie Wedding 1942} P {Parr, Mary L.} 19990305 {} \x08 {Rocky Pine Ranch Collection} 20000614 {Parr, Mary L.} Good "\x09" {Folder P-R} {\x0B} {} {\x0C} {} {} {} 1942 \x0E {} {} {Drawer 3} 1942 {1943 Hilton Wedding} {} {} {} {} {} {} {} {} {} {} {} {} {} {8: Communication Artifact} {PastPerfect Museum Archives} {001\1999.1.1.JPG} 1 {Pastville Underwriter's Assoc.} 20061231 610/555-7878 {$ 1,858.00/year} {Page Williams} 1000000.00 {Wilson, Pat} 20010411 1942 {} {} 19980301 20000301 {} {} Yearly 19990305 {} {Photographic Paper/Photographic Emulsion} {} C0987 {} 1999.1.1 {Print, Photographic} {} Copy {} {} Art \x12 {Washington/Spokane County/Cheney} {65 098 07} {2 1/2" x 3 1/2"} {} {} {} Gift 03/01/1999 {Hilton, Ernestine} BF42626F-A146-47D5-BE6D-594902201178 {} {Room 202} {} {} {} {} {} OK {Tanaka, Jeanie} 20010411 \x13 {} \x14 {} {} {} {} {} {} {} {} {} {} \x15 {A Hilton Wedding} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} Vq% Unknown {} {} F 019990000100001 0199900001 31C2C894-E442-4CCB-B26F-903327241167} {{} 0.00 {} {} {} {} P {Allen, Arthur} 20070212 Standard {} {Bob collection} {} {} {} {} {} {} {} {} 0.00 0.00 {} 2007 \xD8\x02 {} {} {} 0 {} {} 0 {} {} {} {} {} {} {} {} {} {} {} {8: Communication Artifact} {Bridgeville Museum of Toys} {} 0 {} {} {} {} {} 0.00 {} {} 0 {} {} {} {} {} {} {} 20070212 {} {} {} {} {} 2007.2.12 Print {} {} {} {} Art {} {} {} {} {} {} {} Unknown {} Bob {} {} {} {} {} {} {} {} OK {Wilson, Pat} 20070213 {} {} {} {} {} {} {} {} {} {} {} {} {} \xD9\x02 {Bob is Testing} {} {} {} {} {} {} {} 0 0.00 0.00 0.000 0.000 {} {} {} {} {} {} {} {} {} {} {} {} {} \u20ACr% Unknown {} {} F 020070000200012 {} EE358272-5B1F-4373-8ED2-765047781352}] \
     dbase_31.dbf                0  [list {\x01 Chai \x01 \x01 {10 boxes x 20 bags} \xBF\x02 ' {} {\x0A} F {}} "M {Original Frankfurter gr\xFCne So\xE1e} {\x0C} \x02 {12 boxes} \xD0\xFB\x01 {} {} \x0F F {}"] \
@@ -70,6 +69,20 @@ foreach {f c r} [list \
     polygon.dbf                 1  [list {} {}] \
 ] {
     test files-3.fixtures/$f "read dbf fixtures/$f" -constraints [expr {$c ? "fixtures" : "fixtures testEncodingTrouble"}] -setup {
+        dbf d -open [file join [testsDirectory] fixtures $f]
+    } -cleanup {
+        $d forget; unset d
+    } -body {
+        list [$d record 0] [$d record [expr {[$d info records]-1}]]
+    } -result $r
+    unset f r
+}
+
+foreach {f c r} [list \
+    cp1251.dbf                  1  [list {1 амбулаторно-поликлиническое} {4 {образовательное медицинское учреждение}}] \
+    dbase_03_cyrillic.dbf       1  [list {Номер 36.30} {Культ 99.99}] \
+] {
+    test files-3.fixtures/$f "read dbf fixtures/$f" -constraints [expr {$c ? "fixtures tcltestEncodingOk" : "fixtures tcltestEncodingOk testEncodingTrouble"}] -setup {
         dbf d -open [file join [testsDirectory] fixtures $f]
     } -cleanup {
         $d forget; unset d
@@ -93,7 +106,7 @@ Chocolate, Mocha Bean, Roasted Almond, Triple Chocolate, Chocolate Hazelnut,\x0D
 Grand Orange, Plum Squares, Milk chocolate squares, and Rasp" \
                                         {This tin is filled with a tempting trio of crunchy pleasures that can be enjoyed by themselves or dunked into fresh cup of coffee. Our perennial favorite Biscotti di Divine returns, chockfull of toasted almonds, flavored with a hint of cinnamon, and half dipped into bittersweet chocolate. Two new twice-baked delights make their debut this season; Heavenly Chocolate Hazelnut and Golden Orange Pignoli. 16 biscotti are packed in a tin.  (1Lb. 2oz.)}] \
 ] {
-    test files-4.fixtures/$f "read dbf memo fixtures/$f" -constraints {fixtures} -setup {
+    test files-4.fixtures/$f "read dbf memo fixtures/$f" -constraints {fixtures dbt} -setup {
         dbf d -open [file join [testsDirectory] fixtures $f]
     } -cleanup {
         $d forget; unset d
@@ -103,7 +116,7 @@ Grand Orange, Plum Squares, Milk chocolate squares, and Rasp" \
     unset f m r
 }
 
-test files-5.fixtures/dbase_83_missing_memo.dbf "read dbf missing memo fixtures/dbase_83_missing_memo.dbf" -constraints {fixtures} -setup {
+test files-5.fixtures/dbase_83_missing_memo.dbf "read dbf missing memo fixtures/dbase_83_missing_memo.dbf" -constraints {fixtures dbt} -setup {
     dbf d -open [file join [testsDirectory] fixtures dbase_83_missing_memo.dbf]
 } -cleanup {
     $d forget; unset d

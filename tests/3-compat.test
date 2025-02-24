@@ -7,7 +7,8 @@ if {![testConstraint singleTestInterp]} {
    # cant reload shared library, tests skipped
 }
 
-testConstraint tcltestEncodingBug [expr {![configure -singleproc] && [testConstraint win]}]
+# NOTE: tcltest 2.5 does not use "-encoding utf-8" for test sources when runAllTests running in the separate interpreter mode 
+testConstraint tcltestEncodingOk [expr {[testConstraint tcltestEncodingOk] || [configure -singleproc] || [testConstraint macOrUnix]}]
 testConstraint utf8 [expr {[encoding system] eq "utf-8"}]
 
 # dbf syntax
@@ -75,7 +76,7 @@ test compat-2.2 {float format} -constraints !singleTestInterp -setup {
    $d record 0
 } -result {1.20}
 
-test compat-3.1 {nonascii data, singlebyte chars} -constraints {!singleTestInterp && !utf8} -setup {
+test compat-3.1 {nonascii data, singlebyte chars} -constraints tcltestEncodingOk -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
