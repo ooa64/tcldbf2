@@ -14,10 +14,10 @@ try {
 
     dbf d -open $dbfname -readonly
 
-    puts dbfname:\t[file tail $dbfname]
-    puts Codepage:\t[$d codepage]
+    puts Filename:\t[file tail $dbfname]
     puts Filesize:\t[file size $dbfname]
     puts Records:\t[$d info records]
+    puts Codepage:\t[$d codepage]
     puts Fields:
     foreach f [$d fields] {
         puts [format "\t%-10s\t%-7s %s %s %s" {*}$f]
