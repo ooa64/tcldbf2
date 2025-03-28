@@ -1264,6 +1264,8 @@ SAOffset DBFReadMemoAttribute(DBFHandle psDBF, int iRecord, int iField,
 {
     const char *memoValue = STATIC_CAST(
         const char *, DBFReadAttribute(psDBF, iRecord, iField, 'M'));
+    if (memoValue == NULL)
+        return 0;
     int block = atoi(memoValue);
     if (block == 0)
         return 0;
