@@ -1,6 +1,6 @@
 diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
 --- ./shapelib-orig/dbfopen.c	2024-12-21 14:33:34.041000000 +0200
-+++ ./shapelib/dbfopen.c	2025-02-22 15:59:11.713313790 +0200
++++ ./shapelib/dbfopen.c	2025-03-29 17:39:03.204890075 +0200
 @@ -91,7 +91,7 @@
      /* -------------------------------------------------------------------- */
      /*      Initialize the file header information.                         */
@@ -65,11 +65,11 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
      }
  
 +    memcpy(pszFullname + nLenWithoutExtension, ".dbt", 5);
-+    SAFile pfDBT = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
++    SAFile pfDBT = psHooks->FOpen(pszFullname, "rb", psHooks->pvUserData);
 +    if (pfDBT == SHPLIB_NULLPTR)
 +    {
 +        memcpy(pszFullname + nLenWithoutExtension, ".DBT", 5);
-+        pfDBT = psHooks->FOpen(pszFullname, "r", psHooks->pvUserData);
++        pfDBT = psHooks->FOpen(pszFullname, "rb", psHooks->pvUserData);
 +    }
 +
      memcpy(pszFullname + nLenWithoutExtension, ".cpg", 5);
@@ -235,7 +235,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
              return -1;
          }
      }
-@@ -1204,6 +1254,53 @@
+@@ -1204,6 +1254,55 @@
  }
  
  /************************************************************************/
@@ -245,10 +245,12 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
 +/************************************************************************/
 +
 +SAOffset DBFReadMemoAttribute(DBFHandle psDBF, int iRecord, int iField,
-+                         unsigned char * pszMemoBuffer, int nMemoBufferSize)
++                         unsigned char * pszMemoBuffer, SAOffset nMemoBufferSize)
 +{
 +    const char *memoValue = STATIC_CAST(
 +        const char *, DBFReadAttribute(psDBF, iRecord, iField, 'M'));
++    if (memoValue == NULL)
++        return 0;
 +    int block = atoi(memoValue);
 +    if (block == 0)
 +        return 0;
@@ -269,7 +271,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
 +                unsigned char u[8];
 +                if (psDBF->sHooks.FRead(u, 8, 1, psDBF->memofp) == 1) {
 +                    if (u[0] == 0xFF && u[1] == 0xFF && u[2] == 0x08 && u[3] == 0x00) {
-+                        unsigned nMemoSize = u[4] | (u[5] << 8) | (u[6] << 16) | (u[7] << 24);
++                        SAOffset nMemoSize = u[4] | (u[5] << 8) | (u[6] << 16) | (u[7] << 24);
 +                        if (nMemoSize >= 8) {
 +                            nMemoSize -= 8;
 +                            if (nMemoSize > nMemoBufferSize)
@@ -289,7 +291,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
  /*                         DBFIsValueNULL()                             */
  /*                                                                      */
  /*      Return TRUE if the passed string is NULL.                       */
-@@ -2071,7 +2168,7 @@
+@@ -2071,7 +2170,7 @@
          free(pszHeaderNew);
          free(pszRecord);
          free(pszRecordNew);
@@ -330,7 +332,7 @@ diff -bur ./shapelib-orig/safileio.c ./shapelib/safileio.c
  #endif
 diff -bur ./shapelib-orig/shapefil.h ./shapelib/shapefil.h
 --- ./shapelib-orig/shapefil.h	2024-12-21 14:33:34.041000000 +0200
-+++ ./shapelib/shapefil.h	2025-02-22 15:54:38.533307679 +0200
++++ ./shapelib/shapefil.h	2025-02-22 17:20:32.214343568 +0200
 @@ -146,8 +146,9 @@
          int (*FClose)(SAFile file);
          int (*Remove)(const char *filename, void *pvUserData);
@@ -359,7 +361,7 @@ diff -bur ./shapelib-orig/shapefil.h ./shapelib/shapefil.h
      SHPDate SHPAPI_CALL DBFReadDateAttribute(DBFHandle hDBF, int iShape,
                                               int iField);
 +    SAOffset DBFReadMemoAttribute(DBFHandle psDBF, int iShape, int iField,
-+                                  unsigned char * pszMemoBuffer, int nMemoBufferSize);
++                                  unsigned char * pszMemoBuffer, SAOffset nMemoBufferSize);
      int SHPAPI_CALL DBFIsAttributeNULL(const DBFHandle hDBF, int iShape,
                                         int iField);
  
