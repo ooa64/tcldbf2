@@ -82,6 +82,20 @@ Tk $::tk_patchLevel
 Tcldbf [package require tcldbf]"
 }
 
+proc appToplevelBindings {toplevel} {
+    if {[tk windowingsystem] eq "win32"} {
+        bind $toplevel <Control-Key> {appWindowsCopyPasteFix %W %K %k}
+    }
+}
+
+proc appWindowsCopyPasteFix {W K k} {
+    switch $k {
+        67 {if {"$K" ni {"C" "c"}} {event generate $W <<Copy>>}}
+        86 {if {"$K" ni {"V" "v"}} {event generate $W <<Paste>>}}
+        88 {if {"$K" ni {"X" "x"}} {event generate $W <<Cut>>}}
+    }
+}
+
 proc windowCreate {toplevel} {
     global state option
 
@@ -113,12 +127,9 @@ proc windowCreate {toplevel} {
     sheetCreate 50 10
 
     if {[tk windowingsystem] eq "win32"} {
-        # NOTE: use keycode bindings to ignore keyboard language mode on windows
-        bind $toplevel <Control-Key> {switch %k 79 fileOpen 81 windowClose 73 infoCreate 70 findCreate}
-        # TODO:
-        # 67 {event generate %W <<Copy>>}
-        # 86 {event generate %W <<Paste>>}
-        # 88 {event generate %W <<Cut>>}
+        # NOTE: use keycode bindings to ignore keyboard mode on windows
+        bind $toplevel <Control-Key> \
+                {switch %k 79 fileOpen 81 windowClose 73 infoCreate 70 findCreate}
     } else {
         foreach {k c} {o fileOpen q windowClose i infoCreate f findCreate} {
             bind $toplevel <Control-$k> [list $c]
@@ -127,8 +138,6 @@ proc windowCreate {toplevel} {
     }
     bind $toplevel <F3> {findNext 1}
     bind $toplevel <Shift-F3> {findNext 0}
-
-    bind All <<Cut>> {puts cut:%W}
 
     wm protocol $toplevel WM_DELETE_WINDOW {windowClose}
     wm minsize $toplevel [expr {50*$x}] [expr {10*$y}]
@@ -668,6 +677,7 @@ proc findCreate {} {
     wm transient $w.find [winfo parent $w.find]
     wm withdraw $w.find
 
+    appToplevelBindings $w.find
     tk::PlaceWindow $w.find "widget" [winfo parent $w.find]
     tk::SetFocusGrab $w.find $w.find.string
 }
