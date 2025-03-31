@@ -84,7 +84,7 @@ Tcldbf [package require tcldbf]"
 
 proc appToplevelBindings {toplevel} {
     if {[tk windowingsystem] eq "win32"} {
-        bind $toplevel <Control-Key> {appWindowsCopyPasteFix %W %K %k}
+        bind $toplevel <Control-Key> {+appWindowsCopyPasteFix %W %K %k}
     }
 }
 
@@ -126,23 +126,12 @@ proc windowCreate {toplevel} {
 
     sheetCreate 50 10
 
-    if {[tk windowingsystem] eq "win32"} {
-        # NOTE: use keycode bindings to ignore keyboard mode on windows
-        bind $toplevel <Control-Key> \
-                {switch %k 79 fileOpen 81 windowClose 73 infoCreate 70 findCreate}
-    } else {
-        foreach {k c} {o fileOpen q windowClose i infoCreate f findCreate} {
-            bind $toplevel <Control-$k> [list $c]
-            bind $toplevel <Control-[string toupper $k]> [list $c]
-        }
-    }
-    bind $toplevel <F3> {findNext 1}
-    bind $toplevel <Shift-F3> {findNext 0}
-
     wm protocol $toplevel WM_DELETE_WINDOW {windowClose}
     wm minsize $toplevel [expr {50*$x}] [expr {10*$y}]
     wm geometry $toplevel [expr {100*$x}]x[expr {20*$y}]
 
+    appToplevelBindings $toplevel
+    windowToplevelBindings $toplevel
     tk::PlaceWindow $toplevel
 }
 
@@ -153,6 +142,21 @@ proc windowClose {} {
         catch {$state(dbf:handle) forget}
     }
     exit
+}
+
+proc windowToplevelBindings {toplevel} {
+    if {[tk windowingsystem] eq "win32"} {
+        # NOTE: use keycode bindings to ignore keyboard mode on windows
+        bind $toplevel <Control-Key> \
+                {+switch %k 79 fileOpen 81 windowClose 73 infoCreate 70 findCreate}
+    } else {
+        foreach {k c} {o fileOpen q windowClose i infoCreate f findCreate} {
+            bind $toplevel <Control-$k> [list $c]
+            bind $toplevel <Control-[string toupper $k]> [list $c]
+        }
+    }
+    bind $toplevel <F3> {findNext 1}
+    bind $toplevel <Shift-F3> {findNext 0}
 }
 
 proc sheetCreate {width height} {
@@ -178,7 +182,6 @@ proc sheetCreate {width height} {
 
     grid columnconfigure [winfo parent $w.tree] 0 -weight 1
     grid rowconfigure [winfo parent $w.tree] 0 -weight 1
-
 }
 
 proc sheetDestroy {} {
@@ -190,7 +193,7 @@ proc sheetDestroy {} {
     }
 }
 
-proc sheetBind {} {
+proc sheetBindings {} {
     global state
     set w $state(window)
     set x $state(font:width)
@@ -300,7 +303,7 @@ proc fileOpen {{filename ""}} {
 
     after idle [list focus $w.tree]
 
-    sheetBind
+    sheetBindings
     sheetSelect $state(item:first)
 }
 
@@ -465,6 +468,8 @@ proc recordCreate {} {
     wm title $w.record "DBF Record"
     wm transient $w.record [winfo parent $w.record]
 
+    appToplevelBindings $w.record
+    windowToplevelBindings $w.record
     tk::PlaceWindow $w.record "widget" [winfo parent $w.record]
 
     recordLoad "focus"
@@ -610,6 +615,7 @@ proc infoCreate {} {
 
     wm title $w.info "DBF Info"
 
+    appToplevelBindings $w.info
     tk::PlaceWindow $w.info "widget" [winfo parent $w.info]
     tk::SetFocusGrab $w.info $w.info.ok
 }
