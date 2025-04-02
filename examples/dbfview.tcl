@@ -6,17 +6,23 @@ package require Tk 8.6-
 package require tcldbf 2.1-
 
 wm title . "DBF View"
+wm withdraw .
 
 array set state {}
 array set option {
     -filename ""
     -encoding ""
-    -fixed false
-    -bulk 100
-    -limit 10000
+    -theme ""
     -scale ""
+    -fixed false
+    -width 100
+    -height 30
+    -limit 10000
+    -bulk 100
     -debug 0
 }
+
+package require Tk
 
 proc appInit {argc argv} {
     global state option
@@ -26,7 +32,17 @@ proc appInit {argc argv} {
     } else {
         array set option [linsert $argv end-1 "-filename"]
     }
-
+    if {![string is integer -strict $option(-width)] || $option(-width) < 50 ||
+            ![string is integer -strict $option(-height)] || $option(-height) < 10} {
+        error "invalid width/height option"
+    }
+    if {![string is integer -strict $option(-limit)] ||
+            ![string is integer -strict $option(-bulk)]} {
+        error "invalid bulk/limit option"
+    }
+    if {$option(-theme) ne ""} {
+        ::ttk::setTheme $option(-theme) 
+    }
     if {[string is double -strict $option(-scale)]} {
         set scale [expr {min( max( $option(-scale), 0.2 ), 5.0 )}]
         if {[tk windowingsystem] eq "win32"} {
@@ -38,7 +54,6 @@ proc appInit {argc argv} {
             }
         }
     }
-
     if {$option(-fixed)} {
         ttk::style configure Treeview -font TkFixedFont
     }
@@ -61,12 +76,27 @@ proc appInit {argc argv} {
             clipboard append -displayof %W [join [%W item $i -values] \t]\n
         }
     }
+    bind Treeview <<SelectPrevLine>> {
+        if {[set i [%W prev [%W focus]]] ne ""} {
+           %W selection add [list $i]; %W focus $i; %W see $i
+       }
+    }
+    bind Treeview <<SelectNextLine>> {
+        if {[set i [%W next [%W focus]]] ne ""} {
+           %W selection add [list $i]; %W focus $i; %W see $i
+       }
+    }
+    bind Treeview <<SelectAll>> {%W selection set [%W children {}]}
+    bind Treeview <<SelectNone>> {%W selection remove [%W selection]}
 
     bind Button <Left>        {focus [tk_focusPrev %W]}
     bind Button <Right>       {focus [tk_focusNext %W]}
     bind Button <Up>          {focus [tk_focusPrev %W]}
     bind Button <Down>        {focus [tk_focusNext %W]}
     bind Button <Return>      {%W invoke; break}
+
+    option add *Menu*TearOff off
+    option add *Toplevel*Background [ttk::style lookup . -background]
 
     if {$option(-debug)} {
         catch {console show}
@@ -105,10 +135,10 @@ proc windowCreate {toplevel} {
     set y $state(font:height)
     set w $state(window)
 
-    menu $w.menu -tearoff off
-    menu $w.menu.file -tearoff off
-    menu $w.menu.view -tearoff off
-    menu $w.menu.help -tearoff off
+    menu $w.menu
+    menu $w.menu.file
+    menu $w.menu.view
+    menu $w.menu.help
     $w.menu add cascade -menu $w.menu.file -label "File"
     $w.menu add cascade -menu $w.menu.view -label "View"
     $w.menu add cascade -menu $w.menu.help -label "Help"
@@ -122,17 +152,22 @@ proc windowCreate {toplevel} {
     $w.menu.view add command -command {findNext 0} -label "Find Prev" -accelerator "Shift-F3"
     $w.menu.view add command -command {findNext 1} -label "Find Next" -accelerator "F3"
     $w.menu.help add command -command {appAbout} -label "About"
-    $toplevel configure -menu $w.menu -takefocus 0
+    $toplevel configure -menu $w.menu -takefocus 0 -bg [ttk::style lookup . -background]
 
     sheetCreate 50 10
 
     wm protocol $toplevel WM_DELETE_WINDOW {windowClose}
     wm minsize $toplevel [expr {50*$x}] [expr {10*$y}]
-    wm geometry $toplevel [expr {100*$x}]x[expr {20*$y}]
-
+    wm maxsize $toplevel [winfo vrootwidth $toplevel] [winfo vrootheight $toplevel]
+    wm geometry $toplevel [format "%dx%d+%d+%d" \
+            [expr {$option(-width)*$x}] [expr {$option(-height)*$y}] \
+            [expr {max(([winfo screenwidth $toplevel]-$option(-width)*$x)/2,0)}] \
+            [expr {max(([winfo screenheight $toplevel]-$option(-height)*$y)/2,0)}]]
     appToplevelBindings $toplevel
     windowToplevelBindings $toplevel
-    tk::PlaceWindow $toplevel
+    wm deiconify $toplevel
+    raise $toplevel
+    focus $toplevel
 }
 
 proc windowClose {} {
@@ -182,6 +217,8 @@ proc sheetCreate {width height} {
 
     grid columnconfigure [winfo parent $w.tree] 0 -weight 1
     grid rowconfigure [winfo parent $w.tree] 0 -weight 1
+
+    after 1 [list focus -force $w.tree]
 }
 
 proc sheetDestroy {} {
@@ -439,7 +476,7 @@ proc recordCreate {} {
 
     canvas $w.record.c -height [expr {20*$y}] -yscrollcommand "$w.record.v set"
     ttk::scrollbar $w.record.v -command "$w.record.c yview"
-    ttk::frame $w.record.c.f
+    ttk::frame $w.record.c.f -padding 4
     foreach c [lrange [$w.tree cget -columns] 0 end-1] {
         ttk::label $w.record.c.f.l$c -text [$w.tree heading $c -text] -anchor "e"
         ttk::entry $w.record.c.f.e$c -width 50 -state readonly
@@ -765,7 +802,12 @@ proc findNext {forward} {
     }
 }
 
-appInit $argc $argv
+try {
+    appInit $argc $argv
+} on error {message} {
+    tk_messageBox -icon "error" -title "Startup error" -message $message
+    exit 1
+}
 
 windowCreate .
 
