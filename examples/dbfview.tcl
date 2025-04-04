@@ -14,6 +14,7 @@ array set option {
     -encoding ""
     -theme ""
     -scale ""
+    -font ""
     -fixed false
     -width 100
     -height 30
@@ -41,7 +42,12 @@ proc appInit {argc argv} {
         error "invalid bulk/limit option"
     }
     if {$option(-theme) ne ""} {
+        if {$option(-theme) eq "dark"} {
+            appThemeDark
+        }
         ::ttk::setTheme $option(-theme) 
+        option add *Toplevel*foreground [ttk::style lookup . -foreground]
+        option add *Toplevel*background [ttk::style lookup . -background]
     }
     if {[string is double -strict $option(-scale)]} {
         set scale [expr {min( max( $option(-scale), 0.2 ), 5.0 )}]
@@ -54,8 +60,10 @@ proc appInit {argc argv} {
             }
         }
     }
-    if {$option(-fixed)} {
+    if {$option(-font) eq "fixed"} {
         ttk::style configure Treeview -font TkFixedFont
+    } elseif {$option(-font) ne ""} {
+        ttk::style configure Treeview -font [font create TkCustomFont -family $option(-font)]
     }
     set font [ttk::style lookup Treeview -font]
     if {$font eq ""} {
@@ -79,24 +87,23 @@ proc appInit {argc argv} {
     bind Treeview <<SelectPrevLine>> {
         if {[set i [%W prev [%W focus]]] ne ""} {
            %W selection add [list $i]; %W focus $i; %W see $i
-       }
+        }
     }
     bind Treeview <<SelectNextLine>> {
         if {[set i [%W next [%W focus]]] ne ""} {
            %W selection add [list $i]; %W focus $i; %W see $i
-       }
+        }
     }
     bind Treeview <<SelectAll>> {%W selection set [%W children {}]}
     bind Treeview <<SelectNone>> {%W selection remove [%W selection]}
 
-    bind Button <Left>        {focus [tk_focusPrev %W]}
-    bind Button <Right>       {focus [tk_focusNext %W]}
-    bind Button <Up>          {focus [tk_focusPrev %W]}
-    bind Button <Down>        {focus [tk_focusNext %W]}
-    bind Button <Return>      {%W invoke; break}
+    bind TButton <Left>        {focus [tk_focusPrev %W]}
+    bind TButton <Right>       {focus [tk_focusNext %W]}
+    bind TButton <Up>          {focus [tk_focusPrev %W]}
+    bind TButton <Down>        {focus [tk_focusNext %W]}
+    bind TButton <Return>      {%W invoke; break}
 
     option add *Menu*TearOff off
-    option add *Toplevel*Background [ttk::style lookup . -background]
 
     if {$option(-debug)} {
         catch {console show}
@@ -105,11 +112,53 @@ proc appInit {argc argv} {
 }
 
 proc appAbout {} {
-    tk_messageBox -type "ok" -title "About" -message "DBFView
+    tk_messageBox -type "ok" -title "About" -message "DBF View 1.1\n\n\
+            Tcl [package require Tcl]\n\
+            Tk [package require Tk]\n\
+            Tcldbf [package require tcldbf]"
+}
 
-Tcl $::tcl_patchLevel
-Tk $::tk_patchLevel
-Tcldbf [package require tcldbf]"
+proc appThemeDark {} {
+    array set colors {
+        -background #33393b
+        -foreground #ffffff
+        -selectbackground #215d9c 
+        -selectforeground #ffffff
+        -fieldbackground #191c1d
+        -bordercolor #000000
+        -insertcolor #ffffff
+        -troughcolor #191c1d
+        -focuscolor #215d9c
+        -lightcolor #5c6062
+        -darkcolor #232829
+    }
+    ttk::style theme create dark -parent clam -settings {
+        ttk::style configure . {*}[array get colors]
+        ttk::style configure TCheckbutton -indicatormargin {1 1 4 1} \
+                -indicatorbackground $colors(-fieldbackground) \
+                -indicatorforeground $colors(-foreground)
+        ttk::style configure TButton \
+                -anchor center -width -11 -padding 5 -relief raised
+        ttk::style map TEntry \
+                -bordercolor [list focus $colors(-selectbackground)]
+        ttk::style map TCombobox \
+                -bordercolor [list focus $colors(-selectbackground)]
+        ttk::style configure ComboboxPopdownFrame \
+                -relief solid -borderwidth 1
+        ttk::style configure Treeview \
+                -background $colors(-fieldbackground)
+        ttk::style map Treeview \
+                -background [list selected $colors(-selectbackground)] \
+                -foreground [list selected $colors(-selectforeground)] \
+                -bordercolor [list focus $colors(-selectbackground)]
+    }
+    option add *TCombobox*Listbox.foreground $colors(-foreground)
+    option add *TCombobox*Listbox.background $colors(-fieldbackground)
+    option add *TCombobox*Listbox.selectForeground $colors(-selectforeground)
+    option add *Canvas.background $colors(-background)
+    option add *Canvas.highlightColor $colors(-selectbackground)
+    option add *Canvas.highlightBackground $colors(-background)
+    option add *Canvas.highlightThickness 2
 }
 
 proc appToplevelBindings {toplevel} {
