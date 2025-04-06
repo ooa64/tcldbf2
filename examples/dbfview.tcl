@@ -560,22 +560,21 @@ proc recordCreate {} {
     }
     grid columnconfigure $w.record.c.f 1 -weight 1
 
+    ttk::frame $w.record.f
+    ttk::button $w.record.f.b1 -text "Prev" -command {recordLoad "prev"}
+    ttk::button $w.record.f.b2 -text "Next" -command {recordLoad "next"}
+    ttk::button $w.record.f.b3 -text "Close" -command [list destroy $w.record]
+    pack $w.record.f.b3 $w.record.f.b2 $w.record.f.b1 -side "right" -padx 4 -pady 4
+    grid $w.record.c $w.record.v -sticky "news"
+    grid $w.record.f - -sticky "we"
+    grid columnconfigure $w.record 0 -weight 1
+    grid rowconfigure $w.record 0 -weight 1
+
     update idletasks
-    $w.record.c configure -width [winfo reqwidth $w.record.c.f]
     $w.record.c.f configure -width [winfo reqwidth $w.record.c.f] -height [winfo reqheight $w.record.c.f]
-
-    ttk::button $w.record.b1 -text "Prev" -command {recordLoad "prev"}
-    ttk::button $w.record.b2 -text "Next" -command {recordLoad "next"}
-    ttk::button $w.record.b3 -text "Close" -command [list destroy $w.record]
-
     $w.record.c create window 0 0 -anchor nw -window $w.record.c.f
     $w.record.c configure -scrollregion [$w.record.c bbox all] \
             -height [expr {20*$y}] -width [winfo reqwidth $w.record.c.f]
-
-    grid $w.record.c - - - $w.record.v -sticky "news"
-    grid "x" $w.record.b1 $w.record.b2 $w.record.b3 "x" -sticky "e" -padx 4 -pady 2
-    grid columnconfigure $w.record 0 -weight 1
-    grid rowconfigure $w.record 0 -weight 1
 
     bind $w.record <Escape> [list destroy $w.record]
 
