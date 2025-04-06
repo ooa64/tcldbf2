@@ -2,6 +2,7 @@
 # Usage:
 #     wish90s dbfview-make-executable.tcl 
 #
+lappend auto_path ..
 
 package require Tk 9
 package require tcldbf

@@ -112,10 +112,10 @@ proc appInit {argc argv} {
 }
 
 proc appAbout {} {
-    tk_messageBox -type "ok" -title "About" -message "DBF View 1.1\n\n\
+    tk_messageBox -type "ok" -title "About" -message "DBF View 1.1" -detail "\n\
             Tcl [package require Tcl]\n\
             Tk [package require Tk]\n\
-            Tcldbf [package require tcldbf]"
+            Tcldbf [package require tcldbf]\n"
 }
 
 proc appThemeDark {} {
@@ -145,6 +145,8 @@ proc appThemeDark {} {
                 -bordercolor [list focus $colors(-selectbackground)]
         ttk::style configure ComboboxPopdownFrame \
                 -relief solid -borderwidth 1
+        ttk::style configure Heading \
+                -font TkHeadingFont -relief raised
         ttk::style configure Treeview \
                 -background $colors(-fieldbackground)
         ttk::style map Treeview \
@@ -156,6 +158,7 @@ proc appThemeDark {} {
     option add *TCombobox*Listbox.background $colors(-fieldbackground)
     option add *TCombobox*Listbox.selectForeground $colors(-selectforeground)
     option add *Canvas.background $colors(-background)
+    option add *Canvas.highlightBackground $colors(-background)
     option add *Canvas.highlightColor $colors(-selectbackground)
     option add *Canvas.highlightBackground $colors(-background)
     option add *Canvas.highlightThickness 2
