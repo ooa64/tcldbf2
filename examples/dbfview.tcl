@@ -178,6 +178,33 @@ proc appWindowsCopyPasteFix {W K k} {
     }
 }
 
+proc appToplevelCreate {toplevel} {
+    if {[winfo exists $toplevel]} {
+        wm deiconify $toplevel
+        return
+    }
+    toplevel $toplevel -height 1
+    $toplevel configure -width [winfo width [winfo parent $toplevel]]
+}
+
+proc appToplevelPlace {toplevel {grabfocus {}}} {
+    # NOTE: avoid ui splash on update idletasks, replacement for
+    # tk::PlaceWindow $toplevel "widget" [winfo parent $toplevel]
+    # tk::SetFocusGrab $tolevel $grabfocus
+    global state
+    set x $state(font:width)
+    set y $state(font:height)
+    set rootx [winfo rootx [winfo parent $toplevel]]
+    set rooty [winfo rooty [winfo parent $toplevel]]
+    wm geometry $toplevel +[expr {$rootx+8*$x+$x}]+[expr {$rooty+$y+4}]
+    wm deiconify $toplevel
+    update idletasks
+    if {$grabfocus ne ""} {
+        grab $toplevel
+        focus $grabfocus
+    }
+}
+
 proc windowCreate {toplevel} {
     global state option
 
@@ -519,14 +546,11 @@ proc recordCreate {} {
     if {![info exists state(dbf:handle)]} {
         return
     }
-    if {[winfo exists $w.record]} {
-        wm deiconify $w.record
-        return
-    }
-    toplevel $w.record
+
+    appToplevelCreate $w.record
     wm withdraw $w.record
 
-    canvas $w.record.c -height [expr {20*$y}] -yscrollcommand "$w.record.v set"
+    canvas $w.record.c -height 1 -width 1 -yscrollcommand "$w.record.v set"
     ttk::scrollbar $w.record.v -command "$w.record.c yview"
     ttk::frame $w.record.c.f -padding 4
     foreach c [lrange [$w.tree cget -columns] 0 end-1] {
@@ -545,7 +569,8 @@ proc recordCreate {} {
     ttk::button $w.record.b3 -text "Close" -command [list destroy $w.record]
 
     $w.record.c create window 0 0 -anchor nw -window $w.record.c.f
-    $w.record.c configure -scrollregion [$w.record.c bbox all]
+    $w.record.c configure -scrollregion [$w.record.c bbox all] \
+            -height [expr {20*$y}] -width [winfo reqwidth $w.record.c.f]
 
     grid $w.record.c - - - $w.record.v -sticky "news"
     grid "x" $w.record.b1 $w.record.b2 $w.record.b3 "x" -sticky "e" -padx 4 -pady 2
@@ -557,9 +582,9 @@ proc recordCreate {} {
     wm title $w.record "DBF Record"
     wm transient $w.record [winfo parent $w.record]
 
-    appToplevelBindings $w.record
     windowToplevelBindings $w.record
-    tk::PlaceWindow $w.record "widget" [winfo parent $w.record]
+    appToplevelBindings $w.record
+    appToplevelPlace $w.record
 
     recordLoad "focus"
 }
@@ -597,9 +622,11 @@ proc recordLoad {position} {
     set c 0
     foreach f [$h fields] {
         incr c
-        $w.record.c.f.e$c configure -state normal
-        $w.record.c.f.e$c delete 0 end
-        $w.record.c.f.e$c configure -state readonly
+        if {[$w.record.c.f.e$c get] ne ""} {
+            $w.record.c.f.e$c configure -state normal
+            $w.record.c.f.e$c delete 0 end
+            $w.record.c.f.e$c configure -state readonly
+        }
     }
     set c 0
     foreach f [$h fields] v [$w.tree "item" $item -values] {
@@ -621,10 +648,12 @@ proc recordLoad {position} {
                 }
             }
         }
-        $w.record.c.f.e$c configure -state normal
-        $w.record.c.f.e$c delete 0 end
-        $w.record.c.f.e$c insert end $v
-        $w.record.c.f.e$c configure -state readonly
+        if {[$w.record.c.f.e$c get] ne $c} {
+            $w.record.c.f.e$c configure -state normal
+            $w.record.c.f.e$c delete 0 end
+            $w.record.c.f.e$c insert end $v
+            $w.record.c.f.e$c configure -state readonly
+        }
     }
 
     wm title $w.record "DBF Record - $r"
@@ -641,19 +670,15 @@ proc recordDestroy {} {
 
 proc infoCreate {} {
     global state
-
-    if {![info exists state(dbf:handle)]} {
-        return
-    }
     set w $state(window)
     set x $state(font:width)
     set h $state(dbf:handle)
 
-    if {[winfo exists $w.info]} {
-        wm deiconify $w.info
+    if {![info exists state(dbf:handle)]} {
         return
     }
-    toplevel $w.info
+
+    appToplevelCreate $w.info
 
     set i 0
     foreach {n v} [list \
@@ -704,9 +729,9 @@ proc infoCreate {} {
 
     wm title $w.info "DBF Info"
 
+    update
+    appToplevelPlace $w.info $w.info.ok
     appToplevelBindings $w.info
-    tk::PlaceWindow $w.info "widget" [winfo parent $w.info]
-    tk::SetFocusGrab $w.info $w.info.ok
 }
 
 proc infoOk {} {
@@ -736,11 +761,7 @@ proc findCreate {} {
         return
     }
 
-    if {[winfo exists $w.find]} {
-        wm deiconify $w.find
-        return
-    }
-    toplevel $w.find
+    appToplevelCreate $w.find
 
     ttk::label $w.find.l1 -text "Find" -anchor "e"
     ttk::entry $w.find.string -textvariable ::state(find:string) -width 50
@@ -770,11 +791,10 @@ proc findCreate {} {
 
     wm title $w.find "DBF Find"
     wm transient $w.find [winfo parent $w.find]
-    wm withdraw $w.find
 
+    update
+    appToplevelPlace $w.find $w.find.string
     appToplevelBindings $w.find
-    tk::PlaceWindow $w.find "widget" [winfo parent $w.find]
-    tk::SetFocusGrab $w.find $w.find.string
 }
 
 proc findNext {forward} {
