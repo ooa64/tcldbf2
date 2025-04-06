@@ -157,8 +157,8 @@ proc appThemeDark {} {
     option add *TCombobox*Listbox.foreground $colors(-foreground)
     option add *TCombobox*Listbox.background $colors(-fieldbackground)
     option add *TCombobox*Listbox.selectForeground $colors(-selectforeground)
+    option add *TCombobox*Listbox.selectBackground $colors(-selectbackground)
     option add *Canvas.background $colors(-background)
-    option add *Canvas.highlightBackground $colors(-background)
     option add *Canvas.highlightColor $colors(-selectbackground)
     option add *Canvas.highlightBackground $colors(-background)
     option add *Canvas.highlightThickness 2
@@ -181,10 +181,11 @@ proc appWindowsCopyPasteFix {W K k} {
 proc appToplevelCreate {toplevel} {
     if {[winfo exists $toplevel]} {
         wm deiconify $toplevel
-        return
+        return 0
     }
     toplevel $toplevel -height 1
     $toplevel configure -width [winfo width [winfo parent $toplevel]]
+    return 1
 }
 
 proc appToplevelPlace {toplevel {grabfocus {}}} {
@@ -546,8 +547,9 @@ proc recordCreate {} {
     if {![info exists state(dbf:handle)]} {
         return
     }
-
-    appToplevelCreate $w.record
+    if {![appToplevelCreate $w.record]} {
+        return
+    }
     wm withdraw $w.record
 
     canvas $w.record.c -height 1 -width 1 -yscrollcommand "$w.record.v set"
@@ -616,17 +618,16 @@ proc recordLoad {position} {
         update
         return
     }
-
     set r [sheetRecordNo $item]
-    set c 0
-    foreach f [$h fields] {
-        incr c
-        if {[$w.record.c.f.e$c get] ne ""} {
-            $w.record.c.f.e$c configure -state normal
-            $w.record.c.f.e$c delete 0 end
-            $w.record.c.f.e$c configure -state readonly
-        }
-    }
+    # set c 0
+    # foreach f [$h fields] {
+    #     incr c
+    #     if {[$w.record.c.f.e$c get] ne ""} {
+    #         $w.record.c.f.e$c configure -state normal
+    #         $w.record.c.f.e$c delete 0 end
+    #         $w.record.c.f.e$c configure -state readonly
+    #     }
+    # }
     set c 0
     foreach f [$h fields] v [$w.tree "item" $item -values] {
         update
@@ -676,8 +677,9 @@ proc infoCreate {} {
     if {![info exists state(dbf:handle)]} {
         return
     }
-
-    appToplevelCreate $w.info
+    if {![appToplevelCreate $w.info]} {
+        return
+    }
 
     set i 0
     foreach {n v} [list \
@@ -759,8 +761,9 @@ proc findCreate {} {
     if {![info exists state(dbf:handle)]} {
         return
     }
-
-    appToplevelCreate $w.find
+    if {![appToplevelCreate $w.find]} {
+        return
+    }
 
     ttk::label $w.find.l1 -text "Find" -anchor "e"
     ttk::entry $w.find.string -textvariable ::state(find:string) -width 50
