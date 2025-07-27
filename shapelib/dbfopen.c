@@ -13,6 +13,8 @@
 
 #include "shapefil_private.h"
 
+#include <assert.h>
+#include <errno.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -483,7 +485,7 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     const int nFields = (nHeadLen - XBASE_FILEHDR_SZ) / XBASE_FLDHDR_SZ;
     psDBF->nFields = nFields;
 
-    /* coverity[tainted_data] */
+    assert(psDBF->nRecordLength < 65536);
     psDBF->pszCurrentRecord = STATIC_CAST(char *, malloc(psDBF->nRecordLength));
     if (!psDBF->pszCurrentRecord)
     {
@@ -529,6 +531,8 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     /*  Read in Field Definitions                                           */
     /* -------------------------------------------------------------------- */
 
+    // To please Coverity Scan
+    assert(nHeadLen < 65536);
     unsigned char *pabyBufNew =
         STATIC_CAST(unsigned char *, realloc(pabyBuf, nHeadLen));
     if (!pabyBufNew)
@@ -732,6 +736,16 @@ DBFHandle SHPAPI_CALL DBFCreateLL(const char *pszFilename,
         "wb+", psHooks->pvUserData);
     if (fp == SHPLIB_NULLPTR)
     {
+        const size_t nMessageLen = strlen(pszFullname) + 256;
+        char *pszMessage = STATIC_CAST(char *, malloc(nMessageLen));
+        if (pszMessage)
+        {
+            snprintf(pszMessage, nMessageLen, "Failed to create file %s: %s",
+                     pszFullname, strerror(errno));
+            psHooks->Error(pszMessage, psHooks->pvUserData);
+            free(pszMessage);
+        }
+
         free(pszFullname);
         return SHPLIB_NULLPTR;
     }
@@ -1535,14 +1549,14 @@ static bool DBFWriteAttribute(DBFHandle psDBF, int hEntity, int iField,
             char szFormat[20];
             snprintf(szFormat, sizeof(szFormat), "%%%d.%df", nWidth,
                      psDBF->panFieldDecimals[iField]);
-            CPLsnprintf(szSField, sizeof(szSField), szFormat,
-                        *STATIC_CAST(double *, pValue));
+            const double value = *STATIC_CAST(double *, pValue);
+            CPLsnprintf(szSField, sizeof(szSField), szFormat, value);
             szSField[sizeof(szSField) - 1] = '\0';
             if (STATIC_CAST(int, strlen(szSField)) >
                 psDBF->panFieldSize[iField])
             {
                 szSField[psDBF->panFieldSize[iField]] = '\0';
-                nRetResult = false;
+                nRetResult = psDBF->sHooks.Atof(szSField) == value;
             }
             memcpy(REINTERPRET_CAST(char *,
                                     pabyRec + psDBF->panFieldOffset[iField]),
