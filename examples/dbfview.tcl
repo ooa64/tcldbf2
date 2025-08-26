@@ -15,15 +15,12 @@ array set option {
     -theme ""
     -scale ""
     -font ""
-    -fixed false
     -width 100
     -height 30
     -limit 10000
     -bulk 100
     -debug 0
 }
-
-package require Tk
 
 proc appInit {argc argv} {
     global state option
@@ -672,7 +669,6 @@ proc infoCreate {} {
     global state
     set w $state(window)
     set x $state(font:width)
-    set h $state(dbf:handle)
 
     if {![info exists state(dbf:handle)]} {
         return
@@ -680,6 +676,7 @@ proc infoCreate {} {
     if {![appToplevelCreate $w.info]} {
         return
     }
+    set h $state(dbf:handle)
 
     set i 0
     foreach {n v} [list \
