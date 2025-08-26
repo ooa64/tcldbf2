@@ -216,7 +216,7 @@ libraries:
 #========================================================================
 
 doc: $(srcdir)/doc/tcldbf.html
-	@mkdoc $(srcdir)/doc/tcldbf.md $(srcdir)/doc/tcldbf.html
+	-@mkdoc $(srcdir)/doc/tcldbf.md $(srcdir)/doc/tcldbf.html
 
 install: all install-binaries install-libraries install-doc
 

@@ -93,7 +93,7 @@ static void DBFWriteHeader(DBFHandle psDBF)
     /* -------------------------------------------------------------------- */
     /*      Initialize the file header information.                         */
     /* -------------------------------------------------------------------- */
-    abyHeader[0] = psDBF->nFileType; /* memo field? - just copying */
+    abyHeader[0] = 0x03; /* memo field? - just copying */
 
     /* write out update date */
     abyHeader[1] = STATIC_CAST(unsigned char, psDBF->nUpdateYearSince1900);
@@ -171,7 +171,7 @@ static bool DBFFlushRecord(DBFHandle psDBF)
                     szMessage, sizeof(szMessage),
                     "Failure seeking to position before writing DBF record %d.",
                     psDBF->nCurrentRecord);
-                psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
+                psDBF->sHooks.Error(szMessage);
                 return false;
             }
         }
@@ -182,7 +182,7 @@ static bool DBFFlushRecord(DBFHandle psDBF)
             char szMessage[128];
             snprintf(szMessage, sizeof(szMessage),
                      "Failure writing DBF record %d.", psDBF->nCurrentRecord);
-            psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
+            psDBF->sHooks.Error(szMessage);
             return false;
         }
 
@@ -225,7 +225,7 @@ static bool DBFLoadRecord(DBFHandle psDBF, int iRecord)
             snprintf(szMessage, sizeof(szMessage),
                      "fseek(%ld) failed on DBF file.",
                      STATIC_CAST(long, nRecordOffset));
-            psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
+            psDBF->sHooks.Error(szMessage);
             return false;
         }
 
@@ -235,7 +235,7 @@ static bool DBFLoadRecord(DBFHandle psDBF, int iRecord)
             char szMessage[128];
             snprintf(szMessage, sizeof(szMessage),
                      "fread(%d) failed on DBF file.", psDBF->nRecordLength);
-            psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
+            psDBF->sHooks.Error(szMessage);
             return false;
         }
 
@@ -370,24 +370,14 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
         free(pszFullname);
         return SHPLIB_NULLPTR;
     }
-    psDBF->fp = psHooks->FOpen(
-        psHooks->bKeepFileExtension ? pszFilename : pszFullname,
-        pszAccess, psHooks->pvUserData);
+    psDBF->fp = psHooks->FOpen(pszFullname, pszAccess, psHooks->pvUserData);
     memcpy(&(psDBF->sHooks), psHooks, sizeof(SAHooks));
 
-    if (psDBF->fp == SHPLIB_NULLPTR && !psHooks->bKeepFileExtension)
+    if (psDBF->fp == SHPLIB_NULLPTR)
     {
         memcpy(pszFullname + nLenWithoutExtension, ".DBF", 5);
         psDBF->fp =
             psDBF->sHooks.FOpen(pszFullname, pszAccess, psHooks->pvUserData);
-    }
-
-    memcpy(pszFullname + nLenWithoutExtension, ".dbt", 5);
-    SAFile pfDBT = psHooks->FOpen(pszFullname, "rb", psHooks->pvUserData);
-    if (pfDBT == SHPLIB_NULLPTR)
-    {
-        memcpy(pszFullname + nLenWithoutExtension, ".DBT", 5);
-        pfDBT = psHooks->FOpen(pszFullname, "rb", psHooks->pvUserData);
     }
 
     memcpy(pszFullname + nLenWithoutExtension, ".cpg", 5);
@@ -403,14 +393,11 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (psDBF->fp == SHPLIB_NULLPTR)
     {
         free(psDBF);
-        if (pfDBT)
-            psHooks->FClose(pfDBT);
         if (pfCPG)
             psHooks->FClose(pfCPG);
         return SHPLIB_NULLPTR;
     }
 
-    psDBF->memofp = pfDBT;
     psDBF->bNoHeader = FALSE;
     psDBF->nCurrentRecord = -1;
     psDBF->bCurrentRecordModified = FALSE;
@@ -423,8 +410,6 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (!pabyBuf)
     {
         psDBF->sHooks.FClose(psDBF->fp);
-        if (psDBF->memofp)
-            psHooks->FClose(psDBF->memofp);
         if (pfCPG)
             psHooks->FClose(pfCPG);
         free(psDBF);
@@ -433,31 +418,11 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (psDBF->sHooks.FRead(pabyBuf, XBASE_FILEHDR_SZ, 1, psDBF->fp) != 1)
     {
         psDBF->sHooks.FClose(psDBF->fp);
-        if (psDBF->memofp)
-            psDBF->sHooks.FClose(psDBF->memofp);
         if (pfCPG)
             psDBF->sHooks.FClose(pfCPG);
         free(pabyBuf);
         free(psDBF);
         return SHPLIB_NULLPTR;
-    }
-
-    psDBF->nFileType = pabyBuf[0];
-    psDBF->nMemoBlockSize = 0;
-    if (psDBF->memofp) {
-        unsigned char buf[32];
-        if (psDBF->sHooks.FRead(buf, 32, 1, psDBF->memofp) == 1) {
-            if (psDBF->nFileType == 0x83) {
-                // FIXME: check if (buf[16] == 0 || buf[16] == 3) ?
-                psDBF->nMemoBlockSize = 512;
-            } else if (psDBF->nFileType == 0x8B && buf[16] == 0) {
-                psDBF->nMemoBlockSize = buf[20] | (buf[21] << 8);
-            }
-        }
-        if (psDBF->nMemoBlockSize == 0) {
-            psDBF->sHooks.FClose(psDBF->memofp);
-            psDBF->memofp = SHPLIB_NULLPTR;
-        }
     }
 
     DBFSetLastModifiedDate(psDBF, pabyBuf[1], pabyBuf[2], pabyBuf[3]);
@@ -473,8 +438,6 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (psDBF->nRecordLength == 0 || nHeadLen < XBASE_FILEHDR_SZ)
     {
         psDBF->sHooks.FClose(psDBF->fp);
-        if (psDBF->memofp)
-            psDBF->sHooks.FClose(psDBF->memofp);
         if (pfCPG)
             psDBF->sHooks.FClose(pfCPG);
         free(pabyBuf);
@@ -490,8 +453,6 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (!psDBF->pszCurrentRecord)
     {
         psDBF->sHooks.FClose(psDBF->fp);
-        if (psDBF->memofp)
-            psDBF->sHooks.FClose(psDBF->memofp);
         if (pfCPG)
             psDBF->sHooks.FClose(pfCPG);
         free(pabyBuf);
@@ -538,8 +499,6 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
     if (!pabyBufNew)
     {
         psDBF->sHooks.FClose(psDBF->fp);
-        if (psDBF->memofp)
-            psDBF->sHooks.FClose(psDBF->memofp);
         free(pabyBuf);
         free(psDBF->pszCurrentRecord);
         free(psDBF->pszCodePage);
@@ -554,8 +513,6 @@ DBFHandle SHPAPI_CALL DBFOpenLL(const char *pszFilename, const char *pszAccess,
                             psDBF->fp) != 1)
     {
         psDBF->sHooks.FClose(psDBF->fp);
-        if (psDBF->memofp)
-            psDBF->sHooks.FClose(psDBF->memofp);
         free(pabyBuf);
         free(psDBF->pszCurrentRecord);
         free(psDBF->pszCodePage);
@@ -659,9 +616,6 @@ void SHPAPI_CALL DBFClose(DBFHandle psDBF)
     /* -------------------------------------------------------------------- */
     psDBF->sHooks.FClose(psDBF->fp);
 
-    if (psDBF->memofp)
-        psDBF->sHooks.FClose(psDBF->memofp);
-
     if (psDBF->panFieldOffset != SHPLIB_NULLPTR)
     {
         free(psDBF->panFieldOffset);
@@ -731,9 +685,7 @@ DBFHandle SHPAPI_CALL DBFCreateLL(const char *pszFilename,
     /* -------------------------------------------------------------------- */
     /*      Create the file.                                                */
     /* -------------------------------------------------------------------- */
-    SAFile fp = psHooks->FOpen(
-         psHooks->bKeepFileExtension ? pszFilename : pszFullname,
-        "wb+", psHooks->pvUserData);
+    SAFile fp = psHooks->FOpen(pszFullname, "wb+", psHooks->pvUserData);
     if (fp == SHPLIB_NULLPTR)
     {
         const size_t nMessageLen = strlen(pszFullname) + 256;
@@ -742,7 +694,7 @@ DBFHandle SHPAPI_CALL DBFCreateLL(const char *pszFilename,
         {
             snprintf(pszMessage, nMessageLen, "Failed to create file %s: %s",
                      pszFullname, strerror(errno));
-            psHooks->Error(pszMessage, psHooks->pvUserData);
+            psHooks->Error(pszMessage);
             free(pszMessage);
         }
 
@@ -789,8 +741,6 @@ DBFHandle SHPAPI_CALL DBFCreateLL(const char *pszFilename,
 
     memcpy(&(psDBF->sHooks), psHooks, sizeof(SAHooks));
     psDBF->fp = fp;
-    psDBF->memofp = SHPLIB_NULLPTR;
-    psDBF->nFileType = 0x03;
     psDBF->nRecords = 0;
     psDBF->nFields = 0;
     psDBF->nRecordLength = 1;
@@ -892,7 +842,7 @@ int SHPAPI_CALL DBFAddNativeFieldType(DBFHandle psDBF, const char *pszFieldName,
                  "Cannot add field %s. Header length limit reached "
                  "(max 65535 bytes, 2046 fields).",
                  pszFieldName);
-        psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
+        psDBF->sHooks.Error(szMessage);
         return -1;
     }
 
@@ -912,7 +862,7 @@ int SHPAPI_CALL DBFAddNativeFieldType(DBFHandle psDBF, const char *pszFieldName,
                  "Cannot add field %s. Record length limit reached "
                  "(max 65535 bytes).",
                  pszFieldName);
-        psDBF->sHooks.Error(szMessage, psDBF->sHooks.pvUserData);
+        psDBF->sHooks.Error(szMessage);
         return -1;
     }
 
@@ -967,7 +917,7 @@ int SHPAPI_CALL DBFAddNativeFieldType(DBFHandle psDBF, const char *pszFieldName,
     if (!panFieldOffsetNew || !panFieldSizeNew || !panFieldDecimalsNew ||
         !pachFieldTypeNew || !pszHeaderNew || !pszCurrentRecordNew)
     {
-        psDBF->sHooks.Error("Out of memory", psDBF->sHooks.pvUserData);
+        psDBF->sHooks.Error("Out of memory");
         return -1;
     }
 
@@ -978,7 +928,7 @@ int SHPAPI_CALL DBFAddNativeFieldType(DBFHandle psDBF, const char *pszFieldName,
         pszRecord = STATIC_CAST(char *, malloc(psDBF->nRecordLength + nWidth));
         if (!pszRecord)
         {
-            psDBF->sHooks.Error("Out of memory", psDBF->sHooks.pvUserData);
+            psDBF->sHooks.Error("Out of memory");
             return -1;
         }
     }
@@ -1265,55 +1215,6 @@ SHPDate SHPAPI_CALL DBFReadDateAttribute(DBFHandle psDBF, int iRecord,
     }
 
     return date;
-}
-
-/************************************************************************/
-/*                        DBFReadMemoAttribute()                        */
-/*                                                                      */
-/*      Read an memo attribute.                                      */
-/************************************************************************/
-
-SAOffset DBFReadMemoAttribute(DBFHandle psDBF, int iRecord, int iField,
-                         unsigned char * pszMemoBuffer, SAOffset nMemoBufferSize)
-{
-    const char *memoValue = STATIC_CAST(
-        const char *, DBFReadAttribute(psDBF, iRecord, iField, 'M'));
-    if (memoValue == NULL)
-        return 0;
-    int block = atoi(memoValue);
-    if (block == 0)
-        return 0;
-    if (block > 0 && psDBF->memofp) {
-        const SAOffset nMemoOffset = block * psDBF->nMemoBlockSize;
-        if (psDBF->sHooks.FSeek(psDBF->memofp, nMemoOffset, SEEK_SET) == 0) {
-            if (psDBF->nFileType == 0x83) {
-                SAOffset nReadSize =  psDBF->sHooks.FRead(pszMemoBuffer, 1,
-                                                          nMemoBufferSize, psDBF->memofp);
-                if (nReadSize >= 0) {
-                    int i = 0;
-                    // FIXME: check for second 0x1A (?)
-                    while (i < nReadSize && pszMemoBuffer[i] != 0x1A)
-                        i++;
-                    return i;
-                }
-            } else if (psDBF->nFileType == 0x8B) {
-                unsigned char u[8];
-                if (psDBF->sHooks.FRead(u, 8, 1, psDBF->memofp) == 1) {
-                    if (u[0] == 0xFF && u[1] == 0xFF && u[2] == 0x08 && u[3] == 0x00) {
-                        SAOffset nMemoSize = u[4] | (u[5] << 8) | (u[6] << 16) | (u[7] << 24);
-                        if (nMemoSize >= 8) {
-                            nMemoSize -= 8;
-                            if (nMemoSize > nMemoBufferSize)
-                                nMemoSize = nMemoBufferSize;
-                            return psDBF->sHooks.FRead(pszMemoBuffer, 1, 
-                                                       nMemoSize, psDBF->memofp);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return -1;
 }
 
 /************************************************************************/
@@ -2184,7 +2085,7 @@ int SHPAPI_CALL DBFReorderFields(DBFHandle psDBF, const int *panMap)
         free(pszHeaderNew);
         free(pszRecord);
         free(pszRecordNew);
-        psDBF->sHooks.Error("Out of memory", psDBF->sHooks.pvUserData);
+        psDBF->sHooks.Error("Out of memory");
         return FALSE;
     }
 
