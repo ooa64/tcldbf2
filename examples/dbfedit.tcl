@@ -63,7 +63,7 @@ proc appInit {argc argv} {
     }
     set state(font:width) [expr {[font measure $font "X"] + 1}]
     set state(font:height) [expr {[font metrics $font -linespace] + 2}]
-    option add *Tktable*Font $font widgetDefault
+    option add *Table*Font $font widgetDefault
     option add *Menu*TearOff off widgetDefault
     option add *Button*Width 10 widgetDefault
     option add *Entry*Relief "solid" widgetDefault
