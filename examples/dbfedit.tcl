@@ -109,6 +109,7 @@ proc appToplevelPlace {toplevel title {grabfocus {}}} {
         grab $toplevel
         focus $grabfocus
     }
+    update
 }
 
 proc appToplevelBindings {toplevel} {
@@ -175,7 +176,7 @@ proc windowCreate {toplevel} {
         -selectmode extended -state disabled \
         -rowseparator \n -colseparator \t \
         -drawmode single -borderwidth 1 -padx 2 \
-        -cursor arrow -bordercursor size
+        -cursor arrow -bordercursor cross
     scrollbar $w.hbar -orient horizontal -command "$w.table xview"
     scrollbar $w.vbar -orient vertical -command "$w.table yview"
 
@@ -391,12 +392,11 @@ proc recordCreate {} {
             -height [expr {20*$y}] -width [winfo reqwidth $w.record.c.f]
 
     bind $w.record <Escape> recordDestroy
-    wm transient $w.record [winfo parent $w.record]
 
     appToplevelPlace $w.record "DBF Record" $w.record.f.b2
     appToplevelBindings $w.record
-
     wm maxsize $w.record [winfo width $w.record] [lindex [wm maxsize $w.record] 1]
+    wm transient $w.record [winfo parent $w.record]
 
     recordLoad "active"
 }
@@ -470,7 +470,7 @@ proc findCreate {} {
 
     label $w.find.l2 -text "Field" -anchor "e"
     tk_optionMenu $w.find.field state(find:field) "all" {*}[lmap f $state(file:fields) {lindex $f 0}]
-    $w.find.field configure -relief "solid" -pady 1
+    $w.find.field configure -relief "solid" -anchor "w" -padx 1 -pady 1
     grid $w.find.l2 $w.find.field -sticky "we" -padx 4 -pady 2
 
     checkbutton $w.find.nocase -variable state(find:nocase) -text "ignore case"
@@ -488,10 +488,11 @@ proc findCreate {} {
 
     bind $w.find.string <Return> [list findNext 1]
     bind $w.find <Escape> [list destroy $w.find]
-    wm transient $w.find [winfo parent $w.find]
 
     appToplevelPlace $w.find "DBF Find" $w.find.string
     appToplevelBindings $w.find
+    wm maxsize $w.find [winfo width $w.find] [winfo height $w.find]
+    wm transient $w.find [winfo parent $w.find]
 }
 
 proc findDestroy {} {
@@ -628,18 +629,17 @@ proc infoCreate {} {
     set state(info:encoding) $state(file:encoding)
     label $w.info.le -text "Encoding" -anchor "e"
     tk_optionMenu $w.info.me state(info:encoding) "" {*}[lsort -dictionary [encoding names]]
-    $w.info.me configure -relief "solid" -pady 1
+    $w.info.me configure -anchor "w" -relief "solid" -padx 1 -pady 1
     grid $w.info.le $w.info.me -sticky "we" -ipadx 1 -padx 1 -pady 1
     
     set format "%-10s %4s %4s %4s"
-    label $w.info.lf -font TkFixedFont -bg SystemScrollbar -anchor "w" \
-            -text [format $format field type size prec]
+    label $w.info.lf -anchor "e" -text "Schema"
     listbox $w.info.bf -font TkFixedFont -selectmode extended \
             -yscrollcommand "$w.info.vf set"
     scrollbar $w.info.vf -orient vertical \
             -command "$w.info.bf yview"
-    grid $w.info.lf - "x"        -sticky  "ew"  -padx 2 -pady 2
-    grid $w.info.bf - $w.info.vf -sticky "news" -padx 2 -pady 2
+    grid $w.info.lf "x" "x"        -sticky  "ew"  -padx 2 -pady 2
+    grid $w.info.bf "-" $w.info.vf -sticky "news" -padx 2 -pady 2
     foreach f $state(file:fields) {
         $w.info.bf insert end [format $format {*}[lreplace $f 1 1]]
     }
@@ -653,6 +653,8 @@ proc infoCreate {} {
 
     appToplevelPlace $w.info "File Info" $w.info.ok
     appToplevelBindings $w.info
+    wm maxsize $w.info [winfo width $w.info] [lindex [wm maxsize $w.info] 1]
+    wm transient $w.info [winfo parent $w.info]
 }
 
 proc infoOk {} {
