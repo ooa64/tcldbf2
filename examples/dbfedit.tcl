@@ -23,11 +23,12 @@ array set option {
 }
 
 proc appAbout {} {
-    tk_messageBox -type "ok" -title "About" -message "DBF Edit 0.1" -detail "\n\
-            Tcl [package require Tcl]\n\
-            Tk [package require Tk]\n\
-            Tktable [package require Tktable]\n\
-            Tcldbf [package require tcldbf]\n"
+    tk_messageBox -type "ok" -title "About" -message "DBF Edit 0.1" -detail "
+        Tcl [package require Tcl]
+        Tk [package require Tk]
+        Tktable [package require Tktable]
+        Tcldbf [package require tcldbf]
+    "
 }
 
 proc appInit {argc argv} {
@@ -136,14 +137,10 @@ proc appWindowsCopyPasteFix {W K k} {
 }
 
 proc appError {title message} {
-    global state
-    if {[info exists state(window)] && [winfo exists $state(window).table]} {
-        set w [winfo parent $state(window).table]
-    } else {
-        set w .
-    }
+    bell
     appLog $title:\ $message
-    tk_messageBox -parent $w -icon "error" -title "Error" -message $title -detail $message
+    tk_messageBox -parent [lindex [wm stackorder .] end] \
+            -icon "error" -title "Error" -message $title -detail $message
 }
 
 proc appLog {message} {
@@ -176,11 +173,11 @@ proc windowCreate {toplevel} {
     $w.menu add cascade -menu $w.menu.edit -label "Edit"
     $w.menu add cascade -menu $w.menu.view -label "View"
     $w.menu add cascade -menu $w.menu.help -label "Help"
-    $w.menu.file add command -command {windowFileNew} -label "New"
-    $w.menu.file add command -command {windowFileOpen} -label "Open" -accelerator "$Ctrl-O"
-    $w.menu.file add command -command {windowFileClose} -label "Close"
-    $w.menu.file add command -command {windowFileClone} -label "Clone"
-    $w.menu.file add command -command {windowFilePack} -label "Pack"
+    $w.menu.file add command -command {schemaCreate} -label "New File"
+    $w.menu.file add command -command {windowFileOpen} -label "Open File" -accelerator "$Ctrl-O"
+    $w.menu.file add command -command {windowFileClose} -label "Close File"
+    $w.menu.file add command -command {windowFilePack} -label "Pack File"
+    $w.menu.file add command -command {windowFileClone} -label "Clone Empty File"
     $w.menu.file add separator
     $w.menu.file add command -command {windowQuit} -label "Quit" -accelerator "$Ctrl-Q" 
     $w.menu.edit add command -command {event generate [focus] <<Cut>>} -label "Cut" -accelerator "$Ctrl-X"
@@ -189,19 +186,19 @@ proc windowCreate {toplevel} {
     $w.menu.edit add separator
     $w.menu.edit add checkbutton -command {windowEditable check} -label "Editable" -variable ::option(-edit)
     $w.menu.edit add command -command {windowRecordDeleted} -label "Mark Record Deleted" -accelerator "$Alt-D"
-    $w.menu.edit add command -command {windowRecordAppend} -label "Append Record" -accelerator "$Alt-A"
+    $w.menu.edit add command -command {windowRecordAppend} -label "Append New Record" -accelerator "$Alt-A"
     $w.menu.view add command -command {infoCreate} -label "Info" -accelerator "$Ctrl-I"
     $w.menu.view add command -command {recordCreate} -label "Record" -accelerator "$Ctrl-R"
     $w.menu.view add separator
-    $w.menu.view add command -command {findCreate} -label "Find" -accelerator "$Ctrl-F"
+    $w.menu.view add command -command {findCreate} -label "Find..." -accelerator "$Ctrl-F"
     if {$::tcl_platform(os) eq "Darwin"} {
         $w.menu.view add command -command {findNext 1} -label "Find Next" -accelerator "$Ctrl-G"
-        $w.menu.view add command -command {findNext 0} -label "Find Prev" -accelerator "$Ctrl-Shift-G"
+        $w.menu.view add command -command {findNext 0} -label "Find Previous" -accelerator "$Ctrl-Shift-G"
     } else {
-        $w.menu.view add command -command {findNext 0} -label "Find Prev" -accelerator "Shift-F3"
         $w.menu.view add command -command {findNext 1} -label "Find Next" -accelerator "F3"
+        $w.menu.view add command -command {findNext 0} -label "Find Previous" -accelerator "Shift-F3"
     }
-    $w.menu.help add command -command {appAbout} -label "About"
+    $w.menu.help add command -command {appAbout} -label "About DBF Edit"
     $toplevel configure -menu $w.menu -takefocus 0
 
     table $w.table -cols 0 -rows 0 \
@@ -215,18 +212,18 @@ proc windowCreate {toplevel} {
         -cursor arrow -bordercursor cross
     scrollbar $w.hbar -orient horizontal -command "$w.table xview"
     scrollbar $w.vbar -orient vertical -command "$w.table yview"
-
     label $w.status 
+
     grid $w.table $w.vbar -sticky "news"
-    grid $w.hbar "x" -sticky "we"
-    grid $w.status - -sticky "w"
+    grid $w.hbar   x      -sticky "ew"
+    grid $w.status -      -sticky "w"
+    grid columnconfigure [winfo parent $w.table] 0 -weight 1
+    grid rowconfigure [winfo parent $w.table] 0 -weight 1
 
     windowFileClose
     windowToplevelBindings $toplevel
     appToplevelBindings $toplevel
 
-    grid columnconfigure [winfo parent $w.table] 0 -weight 1
-    grid rowconfigure [winfo parent $w.table] 0 -weight 1
     wm protocol $toplevel WM_DELETE_WINDOW {windowQuit}
     wm minsize $toplevel [expr {50*$x}] [expr {10*$y}]
     wm maxsize $toplevel [winfo vrootwidth $toplevel] [winfo vrootheight $toplevel]
@@ -234,15 +231,12 @@ proc windowCreate {toplevel} {
             [expr {$option(-width)*$x}] [expr {$option(-height)*$y}] \
             [expr {max(([winfo screenwidth $toplevel]-$option(-width)*$x)/2,0)}] \
             [expr {max(([winfo screenheight $toplevel]-$option(-height)*$y)/2,0)}]]
-
     wm deiconify $toplevel
     raise $toplevel
     focus -force $w.table
 }
 
 proc windowToplevelBindings {toplevel} {
-    # bind $toplevel <Return> {+recordCreate; break}
-    # bind $toplevel <Double-1> {+recordCreate}
     if {$::tcl_platform(os) eq "Darwin"} {
         # NOTE: use keycode bindings to ignore keyboard mode on mac
         ##nagelfar ignore String argument to switch is constant
@@ -321,7 +315,7 @@ proc windowValidate {col val} {
     lassign [lindex $state(file:fields) $col] - - t s d
     switch -- $t {
         "F" -
-        "N" {expr {$d > 0 ? [string is double $val] :  [string is integer $val]}}
+        "N" {expr {$d > 0 ? [string is double $val] : [string is integer $val]}}
         "D" {expr {[string is digit $val] && ![catch {clock scan $val}]}}
         "L" {expr {$val in {"T" "F" ""}}}
         "C" {expr {[string length $val] <= $s}}
@@ -409,7 +403,7 @@ proc windowFileOpen {{filename ""}} {
         set filename [tk_getOpenFile -title "Open DBF File" -parent [winfo parent $w.table] \
                 -filetypes {{"DBF files" {.dbf .DBF}} {"All files" *}}]
         if {$filename eq ""} {
-            return
+            return 0
         }
     }
     windowFileClose
@@ -419,7 +413,7 @@ proc windowFileOpen {{filename ""}} {
     } on error {message} {
         windowStatus ""
         appError "Opening $filename" $message
-        return
+        return 0
     }
 
     wm title [winfo toplevel $w.table] \
@@ -440,6 +434,7 @@ proc windowFileOpen {{filename ""}} {
 
     windowEditable
     windowStatus ""
+    return 1
 }
 
 proc windowFileClose {} {
@@ -486,15 +481,15 @@ proc windowFileClone {{filename {}} {fields {}} {codepage {}}} {
         set fields $state(file:fields)
     }
     if {$fields eq {}} {
-        return
+        return 0
     }
     if {$filename eq {}} {
         set filename [tk_getSaveFile -title "New DBF File" -parent [winfo parent $w.table] \
                 -filetypes {{"DBF files" {.dbf .DBF}} {"All files" *}}]
         if {$filename eq {}} {
-            return
+            return 0
         }
-        if {[string index "." [file tail $filename]] < 0} {
+        if {[string last "." [file tail $filename]] < 0} {
             append filename ".dbf"
         }
     }
@@ -504,7 +499,7 @@ proc windowFileClone {{filename {}} {fields {}} {codepage {}}} {
     } on error {message} {
         windowStatus ""
         appError "Creating $filename" $message
-        return
+        return 0
     }
     windowFileOpen $filename
 }
@@ -535,16 +530,9 @@ proc windowFileReload {} {
     global state
 
     if {[info exists state(file:name)]} {
-        # TODO: save/restore selection, active cell, find window, record window etc 
+        # TODO: save/restore selection, active cell etc 
         windowFileOpen $state(file:name)
     }
-}
-
-proc windowFileNew {} {
-    puts "windowFileNew: to be done"
-    # set l [codepages]; set c 0; for {set i 0} {$i < 256} {incr i} {if {$i in $l} {set c [expr {$c | 1 << $i}]}}; set c
-    # 1766847064828199408955326209275605677338875325268013602910910426818539294
-    # windowFileClone $filename $fields $codepage
 }
 
 proc windowRecordDeleted {} {
@@ -588,7 +576,6 @@ proc windowRecordAppend {} {
 proc recordCreate {} {
     global state
     set w $state(window)
-    set x $state(font:width)
     set y $state(font:height)
 
     if {![info exists state(file:handle)]} {
@@ -644,10 +631,12 @@ proc recordDestroy {} {
     global state
     set w $state(window)
 
-    if {[winfo exists $w.record]} {
-        array unset state record:*
-        destroy $w.record
+    if {![winfo exists $w.record]} {
+        return
     }
+
+    destroy $w.record
+    array unset state record:*
 }
 
 proc recordSave {col} {
@@ -710,13 +699,21 @@ proc recordLoad {position} {
 
     windowActivate $cell
     
-    wm title $w.record "DBF Record - [expr {$row + 1}]"
-
     set state(record:row) $row
 
     try {
+        set s "DBF Record - [expr {$row + 1}]"
+        if {[fileRowDeleted $row]} {
+            append s " (deleted)"
+        }
+        wm title $w.record $s
+
         set c 0
-        foreach v [fileRow $row] {
+        foreach f $state(file:fields) v [fileRow $row] {
+            lassign $f n - t
+            if {$t eq "M"} {
+                catch {fileMemo $row $n} v
+            }
             $w.record.c.f.e$c configure -state normal -validate none
             $w.record.c.f.e$c delete 0 end
             $w.record.c.f.e$c insert end $v
@@ -782,9 +779,11 @@ proc findDestroy {} {
     global state
     set w $state(window)
 
-    if {[winfo exists $w.find]} {
-        destroy $w.find
+    if {![winfo exists $w.find]} {
+        return
     }
+
+    destroy $w.find
 }
 
 proc findNext {forward {cell ""}} {
@@ -886,10 +885,183 @@ proc findNext {forward {cell ""}} {
     findDestroy
 }
 
+proc schemaCreate {} {
+    global state option
+    set w $state(window)
+
+    if {![appToplevelCreate $w.schema]} {
+        return
+    }
+
+    set state(schema:fieldsformat) "%-10s %4s %4s %4s"
+    set state(schema:codepage) ""
+    set state(schema:fields) {}
+
+    # set l $cps; set c 0; for {set i 0} {$i < 256} {incr i} {if {$i in $l} {set c [expr {$c | 1 << $i}]}}; set cpsmap $c
+    set cpsmap 1766847064828199408955326209275605677338875325268013602910910426818539294
+    set cps {}
+    for {set i 0} {$i < 256} {incr i} {
+        if {$cpsmap >> $i & 1} {
+            lappend cps "LDID/$i"
+        }
+    }
+    label $w.schema.le -text "Codepage" -anchor "e"
+    tk_optionMenu $w.schema.me ::state(schema:codepage) "" {*}$cps
+    $w.schema.me configure -anchor "w" -relief "solid" -padx 1 -pady 1
+        
+    label $w.schema.lf -bd 1 -anchor "e" -text "Fields"
+    set f $w.schema.ff
+    frame $f
+    entry $f.en -width 10 -validate key -vcmd {regexp -nocase {^{}|[A-Z0-9_]{1,10}$} "%P"}
+    entry $f.et -width 1  -validate key -vcmd {regexp -nocase {^{}|[CDLN]$} "%P"}
+    entry $f.es -width 3  -validate key -vcmd {expr {"%P" eq "{}" || [string is integer "%P"] && "%P" < 256}} -justify "right"
+    entry $f.ed -width 3  -validate key -vcmd {expr {"%P" eq "{}" || [string is integer "%P"] && "%P" < 256}} -justify "right"
+    set b [list -width 1 -height 1 -bd 0 -pady 0]
+    button $f.ba {*}$b -text "+" -command {schemaField add}
+    button $f.br {*}$b -text "-" -command {schemaField del}
+    button $f.bu {*}$b -text "\u25B2" -command {schemaField up}
+    button $f.bd {*}$b -text "\u25BC" -command {schemaField down}
+    grid $f.en $f.et $f.es $f.ed $f.ba $f.bu $f.bd $f.br -padx 2
+    listbox $w.schema.xf -font TkFixedFont -listvariable state(schema:fields) \
+            -selectmode "single" -exportselection false \
+            -width [string length [format $state(schema:fieldsformat) - - - -]] \
+            -yscrollcommand "$w.schema.vf set"
+    scrollbar $w.schema.vf -orient vertical \
+            -command "$w.schema.xf yview"
+    button $w.schema.ok -text "OK" -command {schemaOk}
+    grid $w.schema.le $w.schema.me - -  x           -sticky  "ew"  -padx 0 -pady 2
+    grid $w.schema.lf  x           x x  x           -sticky  "ew"  -padx 0 -pady 2
+    grid $w.schema.xf  -           - - $w.schema.vf -sticky "news" -padx 0 -pady 2
+    grid $w.schema.ff  -           - -  x           -sticky  "ew"  -padx 0 -pady 2
+    grid $w.schema.ok  -           - -  x           -sticky  "e"   -padx 0 -pady 2
+
+    grid columnconfigure $w.schema 1 -weight 1
+    grid rowconfigure $w.schema 3 -weight 1
+    bind $w.schema <Escape> schemaDestroy
+    bind $w.schema.xf <<Paste>> schemaPaste
+
+    appToplevelPlace $w.schema "File Schema" $w.schema.ok
+    appToplevelBindings $w.schema
+    wm maxsize $w.schema [winfo width $w.schema] [lindex [wm maxsize $w.schema] 1]
+    wm transient $w.schema [winfo parent $w.schema]
+}
+
+proc schemaDestroy {} {
+    global state
+    set w $state(window)
+
+    if {![winfo exists $w.schema]} {
+        return
+    }
+
+    destroy $w.schema
+    array unset state schema:*
+}
+
+proc schemaPaste {} {
+    global state
+    set w $state(window)
+
+    if {![winfo exists $w.schema]} {
+        return
+    }
+
+    set data [::tk::GetSelection $w.schema.xf CLIPBOARD]
+    foreach f [split $data \n] {
+        lassign {} n t s d
+        scan $f "%s%s%d%d" n t s d
+        set n [string toupper $n]
+        set t [string toupper $t]
+        set v [fileFieldValid [list $n - $t $s $d]]
+        if {$v eq "" && [lsearch $state(schema:fields) "$n *"] < 0} {
+            lappend state(schema:fields) [format $state(schema:fieldsformat) $n $t $s $d]
+        }
+    }
+}
+
+proc schemaOk {} {
+    global state
+    set w $state(window)
+
+    if {![winfo exists $w.schema]} {
+        return
+    }
+    if {[llength $state(schema:fields)] == 0} {
+        return
+    }
+
+    set fields {}
+    foreach f $state(schema:fields) {
+        lassign {} n t s d
+        scan $f "%s%s%d%d" n t s d
+        lappend fields [list $n - $t $s $d]
+    }
+    if {[windowFileClone "" $fields $state(schema:codepage)]} {
+        schemaDestroy
+    }
+}
+
+proc schemaField {command} {
+    global state option
+    set w $state(window)
+
+    if {![winfo exists $w.schema]} {
+        return
+    }
+
+    set i [$w.schema.xf index active]
+    set l $state(schema:fields)
+    if {$command eq "add"} {
+        set n [string toupper [$w.schema.ff.en get]]
+        set t [string toupper [$w.schema.ff.et get]]
+        set s [$w.schema.ff.es get]
+        set d [$w.schema.ff.ed get]
+        set v [fileFieldValid [list $n - $t $s $d]]
+        if {$v ne ""} {
+            appError "Adding field" "invalid field $v"
+            return
+        }
+        set i [lsearch $l "$n *"]
+        if {$i >= 0} {
+            appError "Adding field" "field already exists"
+            return
+        }
+        lappend state(schema:fields) [format $state(schema:fieldsformat) $n $t $s $d]
+        set i [llength $l]
+    } else {
+        if {$i eq ""} {
+            return
+        }
+        switch -- $command {
+            "del" {
+                set state(schema:fields) [lreplace $l $i $i]
+                if {$i >= [llength $l]-1} {
+                    incr i -1
+                }
+            }
+            "up" {
+                if {$i > 0} {
+                    set state(schema:fields) [lreplace $l $i-1 $i [lindex $l $i] [lindex $l $i-1]]
+                    incr i -1
+                }
+            }
+            "down" {
+                if {$i < [llength $l]-1} {
+                    set state(schema:fields) [lreplace $l $i $i+1 [lindex $l $i+1] [lindex $l $i]]
+                    incr i 1
+                }
+            }
+        }
+    }
+    $w.schema.xf see $i
+    $w.schema.xf activate $i
+    $w.schema.xf selection clear 0 end
+    $w.schema.xf selection set $i
+}
+
 proc infoCreate {} {
     global state option
     set w $state(window)
-    set x $state(font:width)
 
     if {![info exists state(file:handle)]} {
         return
@@ -912,35 +1084,47 @@ proc infoCreate {} {
         $w.info.e$i configure -state readonly
         incr i
     }
+    set state(info:fieldsformat) "%-10s %4s %4s %4s"
     set state(info:encoding) $state(file:encoding)
     label $w.info.le -text "Encoding" -anchor "e"
     tk_optionMenu $w.info.me ::state(info:encoding) "" {*}[lsort -dictionary [encoding names]]
     $w.info.me configure -anchor "w" -relief "solid" -padx 1 -pady 1
     grid $w.info.le $w.info.me -sticky "we" -ipadx 1 -padx 1 -pady 1
     
-    set format "%-10s %4s %4s %4s"
     label $w.info.lf -anchor "e" -text "Fields"
-    listbox $w.info.bf -font TkFixedFont -selectmode extended \
+    listbox $w.info.xf -font TkFixedFont -selectmode extended \
+            -width [string length [format $state(info:fieldsformat) - - - -]] \
             -yscrollcommand "$w.info.vf set"
     scrollbar $w.info.vf -orient vertical \
-            -command "$w.info.bf yview"
-    grid $w.info.lf "x" "x"        -sticky  "ew"  -padx 2 -pady 2
-    grid $w.info.bf "-" $w.info.vf -sticky "news" -padx 2 -pady 2
+            -command "$w.info.xf yview"
+    grid $w.info.lf x  x         -sticky "ew"   -padx 2 -pady 2
+    grid $w.info.xf - $w.info.vf -sticky "news" -padx 2 -pady 2
     foreach f $state(file:fields) {
-        $w.info.bf insert end [format $format {*}[lreplace $f 1 1]]
+        $w.info.xf insert end [format $state(info:fieldsformat) {*}[lreplace $f 1 1]]
     }
 
     button $w.info.ok -text "OK" -command {infoOk}
-    grid "x" $w.info.ok -sticky "e" -padx 2 -pady 2
+    grid x $w.info.ok -sticky "e" -padx 2 -pady 2
 
     grid columnconfigure $w.info 1 -weight 1
     grid rowconfigure $w.info 7 -weight 1
-    bind $w.info <Escape> [list destroy $w.info]
+    bind $w.info <Escape> infoDestroy
 
     appToplevelPlace $w.info "File Info" $w.info.ok
     appToplevelBindings $w.info
     wm maxsize $w.info [winfo width $w.info] [lindex [wm maxsize $w.info] 1]
     wm transient $w.info [winfo parent $w.info]
+}
+
+proc infoDestroy {} {
+    global state
+    set w $state(window)
+
+    if {![winfo exists $w.info]} {
+        return
+    }
+    destroy $w.info
+    array unset state info:*
 }
 
 proc infoOk {} {
@@ -950,25 +1134,31 @@ proc infoOk {} {
     if {![winfo exists $w.info]} {
         return
     }
-    destroy $w.info
 
+    destroy $w.info
     if {$state(info:encoding) ne $state(file:encoding)} {
         set option(-encoding) $state(info:encoding)
-        unset state(info:encoding)
         windowFileReload
     } 
+    array unset state info:*
 }
 
 proc fileCreate {filename fields codepage} {
-    dbf h -create $filename -codepage $codepage
-    foreach f $fields {
-        lassign $f n - t s d
-        $h add $n $t $s $d
+    try {
+        dbf h -create $filename -codepage $codepage
+        foreach f $fields {
+            lassign $f n - t s d
+            $h add $n $t $s $d
+        }
+        $h close
+    } on error {message} {
+        catch {$h close}
+        catch {file delete $filename}
+        error $message
+    } finally {
+        # NOTE: shapelib feature for empty codepage 
+        catch {file delete [file rootname $filename].cpg}
     }
-    $h close
-
-    # NOTE: shapelib feature for empty codepage 
-    catch {file delete [file rootname $filename].cpg}
 }
 
 proc fileOpen {filename encoding edit} {
@@ -998,29 +1188,35 @@ proc filePack {filename} {
     global state
     set h $state(file:handle)
 
-    dbf p -create $filename -codepage [$h codepage]
-    $p encoding [$h encoding]
-    foreach f [$h fields] {
-        lassign $f n - t s d
-        $p add $n $t $s $d
-    }
-    for {set i 0} {$i < [$h info records]} {incr i} {
-        if {![$h deleted $i]} {
-            $p insert end [$h record $i]
+    try {
+        dbf p -create $filename -codepage [$h codepage]
+        $p encoding [$h encoding]
+        foreach f [$h fields] {
+            lassign $f n - t s d
+            $p add $n $t $s $d
         }
+        for {set i 0} {$i < [$h info records]} {incr i} {
+            if {![$h deleted $i]} {
+                $p insert end [$h record $i]
+            }
+        }
+        $p close
+    } on error {message} {
+        catch {$p close}
+        catch {file delete $filename}
+        error $message
+    } finally {
+        ;# NOTE: shapelib feature for empty codepage 
+        catch {file delete [file rootname $filename].cpg}
     }
-    $p close
-
-    ;# NOTE: shapelib feature for empty codepage 
-    catch {file delete [file rootname $filename].cpg}
 }
 
 proc fileClose {} {
     global state
     set h $state(file:handle)
 
-    array unset state file:*
     $h close
+    array unset state file:*
 }
 
 proc fileRowDeleted {row args} {
@@ -1063,6 +1259,14 @@ proc fileCell {row col args} {
     return [lindex [fileRow $row] $col]
 }
 
+proc fileMemo {row colname} {
+    global state
+    set h $state(file:handle)
+    set e $state(file:encoding)
+
+    encoding convertfrom $e [$h memo $row $colname]
+}
+
 proc fileAppend {} {
     global state
     set h $state(file:handle)
@@ -1070,6 +1274,35 @@ proc fileAppend {} {
     set state(file:size) [$h insert end {}]
     set state(file:size) [$h info records]
 }    
+
+proc fileFieldValid {field} {
+    lassign $field n - t s d
+    if {![regexp {^[A-Z0-9_]{1,10}$} $n]} {
+        return "name"
+    }
+    if {![regexp {^[CDLN]$} $t]} {
+        return "type"
+    }
+    if {![string is integer -strict $s] || !($s > 0 && $s < 256)} {
+        return "width"
+    }
+    if {![string is integer -strict $d] || !($d >= 0 && $d < $s)} {
+        return "precision"
+    }
+    if {$t eq "C" && !($d == 0)} {
+        return "precision"
+    }
+    if {$t eq "D" && !($s == 8 && $d == 0)} {
+        return "width"
+    }
+    if {$t eq "L" && !($s == 1 && $d == 0)} {
+        return "width"
+    }
+    if {$t eq "N" && $d >= 1 && !($s >= $d + 2)} {
+        return "precision"
+    }
+    return ""
+}
 
 proc bgerror {message {flag 1}} {
     if {$::option(-debug)} {
