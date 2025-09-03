@@ -273,13 +273,11 @@ proc windowToplevelBindings {toplevel} {
                 bind $toplevel <Control-$k> [list $c]
                 bind $toplevel <Control-[string toupper $k]> [list $c]
             }
-            foreach {k c} {
-                d windowRecordDeleted
-                a windowRecordAppend
-            } {
-                bind $toplevel <Alt-$k> [list $c]
-                bind $toplevel <Alt-[string toupper $k]> [list $c]
-            }
+            # NOTE: use alt-keycode bindings to ignore keyboard mode on linux
+            ##nagelfar ignore String argument to switch is constant
+            bind $toplevel <Alt-Key> {+switch %k\
+                    40 windowRecordDeleted\
+                    38 windowRecordAppend}
         }
         bind $toplevel <F3> {findNext 1}
         bind $toplevel <Shift-F3> {findNext 0}
