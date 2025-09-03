@@ -910,11 +910,11 @@ proc schemaCreate {} {
     label $w.schema.lf -bd 1 -anchor "e" -text "Fields"
     set f $w.schema.ff
     frame $f
-    entry $f.en -width 10 -validate key -vcmd {regexp -nocase {^{}|[A-Z0-9_]{1,10}$} "%P"}
-    entry $f.et -width 1  -validate key -vcmd {regexp -nocase {^{}|[CDLN]$} "%P"}
+    entry $f.en -width 10 -validate key -vcmd {regexp -nocase {^({}|[A-Z0-9_]{1,10})$} "%P"}
+    entry $f.et -width 1  -validate key -vcmd {regexp -nocase {^({}|[CDLN])$} "%P"}
     entry $f.es -width 3  -validate key -vcmd {expr {"%P" eq "{}" || [string is integer "%P"] && "%P" < 256}} -justify "right"
     entry $f.ed -width 3  -validate key -vcmd {expr {"%P" eq "{}" || [string is integer "%P"] && "%P" < 256}} -justify "right"
-    set b [list -width 1 -height 1 -bd 0 -pady 0]
+    set b [list -width 1 -height 1 -bd 0 -pady 0 -padx 2]
     button $f.ba {*}$b -text "+" -command {schemaField add}
     button $f.br {*}$b -text "-" -command {schemaField del}
     button $f.bu {*}$b -text "\u25B2" -command {schemaField up}
