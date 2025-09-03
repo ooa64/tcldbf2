@@ -561,7 +561,7 @@ proc windowRecordDeleted {} {
     if {!$state(file:edit)} {
         return
     }
-    if {[catch {scan [$w.table index active] %d} row] || $row < 0} {
+    if {[catch {$w.table index active row} row] || $row < 0} {
         return
     }
     fileRowDeleted $row "toggle"
@@ -597,7 +597,7 @@ proc recordCreate {} {
     if {![info exists state(file:handle)]} {
         return
     }
-    if {[catch {scan [$w.table index active] %d} row] || $row < 0} {
+    if {[catch {$w.table index active row} row] || $row < 0} {
         return
     }
     if {![appToplevelCreate $w.record]} {
@@ -693,11 +693,13 @@ proc recordLoad {position} {
             set cell $row,$col
         }
         "last" {
-            scan [$w.table index end] "%d,%d" row col
+            set row [$w.table index end row]
+            set col [$w.table index end col]
             set cell $row,$col
         }
         default {
-            scan [$w.table index active] "%d,%d" row col
+            set row [$w.table index active row]
+            set col [$w.table index active col]
             switch -- $position {
                 "next" {incr row +1}
                 "prev" {incr row -1}
