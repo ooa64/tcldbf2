@@ -445,6 +445,7 @@ proc windowFileClose {} {
     set state(find:regexp) "0"
 
     $w.table clear all
+    $w.table selection clear all
     $w.table configure -rows 0 -cols 0
     $w.table tag configure "F" -anchor "e"
     $w.table tag configure "M" -anchor "e"
@@ -526,10 +527,27 @@ proc windowFilePack {} {
 
 proc windowFileReload {} {
     global state
+    set w $state(window)
 
-    if {[info exists state(file:name)]} {
-        # TODO: save/restore selection, active cell etc 
+    if {[info exists state(file:handle)]} {
+        set row [$w.table index topleft row]
+        set col [$w.table index topleft col]
+        set active [$w.table index active]
+        set cursel [$w.table curselection]
+
+        # NOTE. Limit selection restore (bad performance)
+        if {[llength $cursel] > 100} { 
+            set cursel {}
+        }
+
         windowFileOpen $state(file:name)
+
+        $w.table yview $row
+        $w.table xview $col
+        $w.table activate $active
+        foreach cell $cursel {
+            $w.table selection set $cell
+        }
     }
 }
 
