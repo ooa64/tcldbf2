@@ -588,7 +588,7 @@ test command-4.3.23 {valid long doubles} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
    $d add N N 16 2
 } -cleanup {
-   $d forget; unset d; #file delete [file join [temporaryDirectory] test.dbf]
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
    $d insert end 0
    $d insert end 0.1
@@ -601,6 +601,18 @@ test command-4.3.23 {valid long doubles} -setup {
    $d insert end -123456789012.345
    $d values N
 } -result {0.00 0.10 0.12 0.12 0.12 1234567890123.45 -123456789012.34 1234567890123.45 -123456789012.34}
+
+test command-4.3.30 {insert several empty line} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+   $d add C C 1 0
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   list \
+      [$d insert end {}] \
+      [$d insert end {}] \
+      [$d insert end {}]
+} -result {0 1 2}
 
 # get
 
