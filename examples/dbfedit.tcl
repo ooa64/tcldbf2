@@ -4,7 +4,7 @@ exec wish8.6 "$0" "$@"
 
 package require Tk 8.6-
 package require Tktable 2.10-
-package require tcldbf 2.1-
+package require tcldbf 2.1.1-
 
 wm title . "DBF Edit"
 wm withdraw .
@@ -40,17 +40,18 @@ proc appInit {argc argv} {
         array set option [linsert $argv end-1 "-filename"]
     }
     if {![string is boolean -strict $option(-debug)]} {
-        error "invalid debug option"
+        set option(-debug) false
+        error "invalid -debug option"
     }
     if {![string is boolean -strict $option(-edit)]} {
-        error "invalid edit option"
+        error "invalid -edit option"
     }
     if {
         ![string is integer -strict $option(-width)] || $option(-width) < 50 ||
         ![string is integer -strict $option(-height)] || $option(-height) < 10 ||
         ![string is integer -strict $option(-maxcolwidth)] || $option(-maxcolwidth) < 1
     } {
-        error "invalid width/height option"
+        error "invalid -width or -height option"
     }
     if {[string is double -strict $option(-scale)]} {
         set scale [expr {min( max( $option(-scale), 0.2 ), 5.0 )}]
