@@ -162,7 +162,7 @@ proc windowCreate {toplevel} {
     set y $state(font:height)
     set w $state(window)
 
-    set Alt [expr {$::tcl_platform(os) eq "Darwin" ? "Option" : "Alt"}]
+    set Alt [expr {$::tcl_platform(os) eq "Darwin" ? "Control" : "Alt"}]
     set Ctrl [expr {$::tcl_platform(os) eq "Darwin" ? "Command" : "Ctrl"}]
     menu $w.menu
     menu $w.menu.file
@@ -185,7 +185,7 @@ proc windowCreate {toplevel} {
     $w.menu.edit add command -command {event generate [focus] <<Paste>>} -label "Paste" -accelerator "$Ctrl-V"
     $w.menu.edit add separator
     $w.menu.edit add checkbutton -command {windowEditable check} -label "Editable" -variable ::option(-edit)
-    $w.menu.edit add command -command {windowRecordDeleted} -label "Mark Record Deleted" -accelerator "$Alt-D"
+    $w.menu.edit add command -command {windowRecordDeleted} -label "Toggle Deleted Mark" -accelerator "$Alt-D"
     $w.menu.edit add command -command {windowRecordAppend} -label "Append New Record" -accelerator "$Alt-A"
     $w.menu.view add command -command {infoCreate} -label "Info" -accelerator "$Ctrl-I"
     $w.menu.view add command -command {recordCreate} -label "Record" -accelerator "$Ctrl-R"
@@ -244,10 +244,14 @@ proc windowToplevelBindings {toplevel} {
                 520093807 windowFileOpen\
                 570425449 infoCreate\
                 50331750  findCreate\
+                251658354 recordCreate\
                 83886183  {findNext 1}\
                 88080487  {findNext 0}\
                 88080455  {findNext 0}}
-        # TODO: Bind Option keys for Delete/Append
+        ##nagelfar ignore String argument to switch is constant
+        bind $toplevel <Control-Key> {+switch %k\
+                33554436 windowRecordDeleted\
+                1 windowRecordAppend}
     } else {
         if {[tk windowingsystem] eq "win32"} {
             # NOTE: use keycode bindings to ignore keyboard mode on windows
