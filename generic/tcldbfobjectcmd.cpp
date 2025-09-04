@@ -326,15 +326,18 @@ int TclDbfObjectCmd::Command (int objc, Tcl_Obj * const objv[]) {
   case cmInsert:
 
     if (objc < 3) {
-      Tcl_WrongNumArgs(tclInterp, 2, objv, "<rowid>|end <list>|?<value> ...?");
+      if (compatible) {
+        Tcl_WrongNumArgs(tclInterp, 2, objv, "<rowid>|end <list>|?<value> ...?");
+      } else {
+        Tcl_WrongNumArgs(tclInterp, 2, objv, "<rowid>|end ?<value> ...?");
+      }
       return TCL_ERROR;
     } else {
 
       Tcl_Size vobjc;
       Tcl_Obj ** vobjv;
-      if (objc == 4 && objv[3]->typePtr && objv[3]->typePtr->name &&
+      if (compatible && objc == 4 && objv[3]->typePtr && objv[3]->typePtr->name &&
           strcmp(objv[3]->typePtr->name, "list") == 0) {
-        // NOTE: v1 compatibility
         if (Tcl_ListObjGetElements(tclInterp, objv[3], &vobjc, &vobjv) == TCL_ERROR) {
           return TCL_ERROR;
         }
@@ -344,7 +347,7 @@ int TclDbfObjectCmd::Command (int objc, Tcl_Obj * const objv[]) {
       }
 
       int fcount = DBFGetFieldCount(dbf);
-      if (vobjc > fcount && !compatible) {
+      if (!compatible && vobjc > fcount) {
         Tcl_SetResult(tclInterp, (char *)"too many values", NULL);
         return TCL_ERROR;
       }

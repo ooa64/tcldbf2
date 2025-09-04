@@ -76,6 +76,25 @@ test compat-2.2 {float format} -constraints !singleTestInterp -setup {
    $d record 0
 } -result {1.20}
 
+test compat-2.3 {insert a list with two strings} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+   $d add S1 C 10 0
+   $d add S2 C 10 0
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   list [$d insert 0 [list foo bar]] [$d record 0]
+} -result {0 {foo bar}}
+
+test command-2.4 {insert empty list} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+   $d add S C 10 0
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   list [$d insert 0 {}] [$d info]
+} -result {0 {0 1}}
+
 test compat-3.1 {nonascii data, singlebyte chars} -constraints tcltestEncodingOk -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
 } -cleanup {

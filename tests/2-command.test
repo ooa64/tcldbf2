@@ -400,14 +400,14 @@ test command-4.3.4 {insert a string with two words} -setup {
    list [$d insert 0 {foo bar}] [$d record 0]
 } -result {0 {{foo bar} {}}}
 
-test command-4.3.5 {insert a list with two strings} -setup {
+test command-4.3.5 {insert a list with two strings, see compat-2.3} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S1 - C 10 0} {S2 - C 10 0}}
    dbf d -open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
    list [$d insert 0 [list foo bar]] [$d record 0]
-} -result {0 {foo bar}}
+} -result {0 {{foo bar} {}}}
 
 test command-4.3.6 {insert list and strings} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S1 - C 10 0} {S2 - C 10 0}}
@@ -418,14 +418,14 @@ test command-4.3.6 {insert list and strings} -setup {
    list [$d insert 0 [list foo bar] baz] [$d record 0]
 } -result {0 {{foo bar} baz}}
 
-test command-4.3.7 {empty list} -setup {
+test command-4.3.7 {insert empty list, see compat-2.4} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] {{S - C 10 0}}
    dbf d -open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {
    list [$d insert 0 {}] [$d info]
-} -result {0 {0 1}}
+} -result {0 {1 1}}
 
 test command-4.3.8 {insert long record} -setup {
    dbf_create [file join [temporaryDirectory] test.dbf] $simple_struct
@@ -605,6 +605,8 @@ test command-4.3.23 {valid long doubles} -setup {
 test command-4.3.30 {insert several empty line} -setup {
    dbf d -create [file join [temporaryDirectory] test.dbf]
    $d add C C 1 0
+   $d forget
+   dbf d -open [file join [temporaryDirectory] test.dbf]
 } -cleanup {
    $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
 } -body {

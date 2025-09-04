@@ -81,11 +81,12 @@ Returns a list of values of the field $name
 
 Compatibility mode: all returned values are strings.
 
-+ **command** insert *rowid*|end *list*|?*value* ...?
++ **command** insert *rowid*|end ?*value* ...?
 
 Inserts the specified values into the given record
 
 Compatibility mode: relaxed error checking.
+Compatibility mode: values can be specified as a single list.
 
 + **command** update *rowid*|end ?*field* *value*? ?*field* *value* ...?
 
