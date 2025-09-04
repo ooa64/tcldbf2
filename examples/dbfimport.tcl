@@ -194,7 +194,7 @@ try {
         while {[gets $c line] >= 0} {
             set line [string trim $line]
             if {[string length $line] && [string index $line 0] ne "#"} {
-                $d insert end [{*}$cmd $line]
+                $d insert end {*}[{*}$cmd $line]
                 incr count
             }
         }

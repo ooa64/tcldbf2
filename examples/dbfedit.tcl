@@ -1220,7 +1220,7 @@ proc filePack {filename} {
         }
         for {set i 0} {$i < [$h info records]} {incr i} {
             if {![$h deleted $i]} {
-                $p insert end [$h record $i]
+                $p insert end {*}[$h record $i]
             }
         }
         $p close
