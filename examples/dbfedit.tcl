@@ -534,9 +534,9 @@ proc windowFileReload {} {
     set w $state(window)
 
     if {[info exists state(file:handle)]} {
+        set active ""; catch {set active [$w.table index active]}
         set row [$w.table index topleft row]
         set col [$w.table index topleft col]
-        set active [$w.table index active]
         set cursel [$w.table curselection]
 
         # NOTE. Limit selection restore (bad performance)
@@ -546,9 +546,9 @@ proc windowFileReload {} {
 
         windowFileOpen $state(file:name)
 
+        $w.table activate $active
         $w.table yview $row
         $w.table xview $col
-        $w.table activate $active
         foreach cell $cursel {
             $w.table selection set $cell
         }
