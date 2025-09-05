@@ -17,8 +17,7 @@ array set option {
     -font ""
     -width 100
     -height 30
-    -limit 10000
-    -bulk 100
+    -explore 1000
     -debug 0
 }
 
@@ -34,9 +33,8 @@ proc appInit {argc argv} {
             ![string is integer -strict $option(-height)] || $option(-height) < 10} {
         error "invalid width/height option"
     }
-    if {![string is integer -strict $option(-limit)] ||
-            ![string is integer -strict $option(-bulk)]} {
-        error "invalid bulk/limit option"
+    if {![string is integer -strict $option(-explore)]} {
+        error "invalid explore option"
     }
     if {$option(-theme) ne ""} {
         if {$option(-theme) eq "dark"} {
@@ -109,7 +107,7 @@ proc appInit {argc argv} {
 }
 
 proc appAbout {} {
-    tk_messageBox -type "ok" -title "About" -message "DBF View 1.1" -detail "\n\
+    tk_messageBox -type "ok" -title "About" -message "DBF View 1.2" -detail "\n\
             Tcl [package require Tcl]\n\
             Tk [package require Tk]\n\
             Tcldbf [package require tcldbf]\n"
@@ -287,10 +285,10 @@ proc sheetCreate {width height} {
             -yscrollcommand "$w.vbar set" -xscrollcommand "$w.hbar set"
     ttk::scrollbar $w.vbar -orient vertical -command "$w.tree yview"
     ttk::scrollbar $w.hbar -orient horizontal -command "$w.tree xview"
-    ttk::label $w.status 
+    ttk::label $w.status -anchor "w"
     grid $w.tree $w.vbar -sticky "news"
     grid $w.hbar "x" -sticky "we"
-    grid $w.status - -sticky "w"
+    grid $w.status - -sticky "we"
 
     grid columnconfigure [winfo parent $w.tree] 0 -weight 1
     grid rowconfigure [winfo parent $w.tree] 0 -weight 1
@@ -321,10 +319,6 @@ proc sheetBindings {} {
 
     bind $w.tree <Prior> {after idle {sheetSelect [%W identify item {*}$::state(item:base)]}}
     bind $w.tree <Next> {after idle {sheetSelect [%W identify item {*}$::state(item:base)]}}
-
-    bind $w.tree <Down> {+fileLoadContinue focus}
-    bind $w.tree <Next> {+fileLoadContinue focus}
-    bind $w.vbar <ButtonRelease-1> {+fileLoadContinue bar %x %y}
 }
 
 proc sheetSelect {item} {
@@ -381,8 +375,6 @@ proc fileOpen {{filename ""}} {
 
     set state(dbf:handle) $h
     set state(dbf:name) [file normalize $filename]
-    set state(dbf:limit) [expr {min( [$h info records], $option(-limit) )}]
-    set state(dbf:loading) ""
     set state(dbf:count) 0
 
     set fields [$h fields]
@@ -404,7 +396,7 @@ proc fileOpen {{filename ""}} {
         dict set columns $c [string length $n]
     }
 
-    fileLoadRows
+    fileLoadRows $option(-explore)
 
     foreach row [$w.tree children {}] {
         foreach c [dict keys $columns] v [$w.tree item $row -values] {
@@ -415,7 +407,9 @@ proc fileOpen {{filename ""}} {
         $w.tree column $c -width [expr {min( [dict get $columns $c], 50 ) * $x + 8}]
     }
 
-    after idle [list focus $w.tree]
+    update idle
+
+    fileLoadRows
 
     sheetBindings
     sheetSelect $state(item:first)
@@ -429,8 +423,6 @@ proc fileClose {} {
     }
 
     wm title [winfo toplevel $state(window).tree] "DBF View"
-
-    after cancel $state(dbf:loading)
     
     recordDestroy
     sheetDestroy
@@ -452,8 +444,6 @@ proc fileReload {} {
 
     $w.tree delete [$w.tree children {}]
 
-    set state(dbf:limit) [expr {min( [$h info records], $option(-limit) )}]
-    set state(dbf:loading) ""
     set state(dbf:count) 0
     set state(item:base) ""
     set state(item:first) ""
@@ -462,14 +452,20 @@ proc fileReload {} {
     fileLoadRows
 }
 
-proc fileLoadRows {{update ""}} {
+proc fileLoadRows {{count ""}} {
     global state option
     set w $state(window)
     set h $state(dbf:handle)
 
+    $w.status configure -text "Loading data ..."
+    update idle
+
     set item ""
     set row $state(dbf:count)
-    set maxrow [expr {min( $row + $option(-bulk), $state(dbf:limit) )}]
+    set maxrow [$h info records]
+    if {$count ne ""} {
+        set maxrow [expr {min( $row + $count, $maxrow )}]
+    } 
     while {$row < $maxrow} {
         set item [$w.tree insert {} end \
                 -text [format "%1s%6d " \
@@ -485,54 +481,8 @@ proc fileLoadRows {{update ""}} {
     set state(item:last) $item
     set state(dbf:count) $row
 
-    $w.status configure -text "$row/[$h info records] rows loaded"
-
-    if {$update ne ""} {
-        update
-    }
-    if {$state(dbf:count) < $state(dbf:limit)} {
-        set state(dbf:loading) [after 1 {fileLoadRows "update"}]
-    }
-}
-
-proc fileLoadContinue {what args} {
-    global state option
-    set w $state(window)
-    set h $state(dbf:handle)
-
-    if {$state(dbf:count) < $state(dbf:limit)} {
-        return
-    }
-    if {$state(dbf:count) >= [$h info records]} {
-        return
-    }
-    switch -- $what {
-        "bar" {
-            if {[lindex [$w.vbar get] 1] < 1.0} {
-                return
-            }
-        }
-        "focus" {
-            if {[$w.tree next [$w.tree focus]] ne {}} {
-                return
-            }
-        }
-        default {}
-    }
-    switch -- [tk_dialog $w.dialog "Question" "Load more rows?" "" \
-            2 "Yes, $option(-limit) rows" "Yes, all rows" "   Cancel   "] {
-        0 {
-            set state(dbf:limit) \
-                [expr {min( $state(dbf:limit) + $option(-limit), [$h info records] )}]
-        }
-        1 {
-            set state(dbf:limit) [$h info records]
-        }
-        default {
-            return
-        }
-    }
-    set state(dbf:loading) [after 1 {fileLoadRows "update"}]
+    $w.status configure -text "$row rows loaded"
+    update idle
 }
 
 proc recordCreate {} {
@@ -606,25 +556,12 @@ proc recordLoad {position} {
         "next" {set item [$w.tree next $item]}
         "prev" {set item [$w.tree prev $item]}
     }
-    if {$item eq ""} {
-        fileLoadContinue "focus"
-        return
-    }
     if {$position ne "focus"} {
         sheetSelect $item
         update
         return
     }
     set r [sheetRecordNo $item]
-    # set c 0
-    # foreach f [$h fields] {
-    #     incr c
-    #     if {[$w.record.c.f.e$c get] ne ""} {
-    #         $w.record.c.f.e$c configure -state normal
-    #         $w.record.c.f.e$c delete 0 end
-    #         $w.record.c.f.e$c configure -state readonly
-    #     }
-    # }
     set c 0
     foreach f [$h fields] v [$w.tree "item" $item -values] {
         update
@@ -743,7 +680,6 @@ proc infoOk {} {
 
     set e [$w.info.encoding get]
     if {$e ne [$h encoding]} {
-        after cancel $state(dbf:loading)
         $h encoding $e
         fileReload
         recordLoad "focus"
@@ -778,15 +714,17 @@ proc findCreate {} {
     ttk::checkbutton $w.find.regexp -variable ::state(find:regexp) -text "regular expression"
     grid x $w.find.regexp -sticky "w" -padx 4 -pady 2
 
-    ttk::label $w.find.status
+    ttk::label $w.find.status -anchor "w"
     ttk::button $w.find.b1 -text "Prev" -command [list findNext 0]
     ttk::button $w.find.b2 -text "Next" -command [list findNext 1]
     ttk::button $w.find.b3 -text "Close" -command [list destroy $w.find]
     grid $w.find.status - $w.find.b1 $w.find.b2 $w.find.b3 -sticky "e" -padx 4 -pady 2
-    grid configure $w.find.status -sticky "w"
+    grid configure $w.find.status -sticky "we"
 
     bind $w.find.string <Return> [list findNext 1]
     bind $w.find <Escape> [list destroy $w.find]
+    bind $w.find <Key> [list $w.find.status configure -text ""]
+    bind $w.find <Button> [list $w.find.status configure -text ""]
 
     wm title $w.find "DBF Find"
     wm transient $w.find [winfo parent $w.find]
@@ -804,11 +742,14 @@ proc findNext {forward} {
         return
     }
     if {![winfo exists $w.find]} {
-        after idle findCreate
+        findCreate
     }
     if {$state(find:string) eq ""} {
         return
     }
+
+    $w.find.status configure -text "Searching..."
+    update idle
 
     set i [lsearch -index 0 [$state(dbf:handle) fields] $state(find:field)]
     if {$i >= 0} {
@@ -819,33 +760,13 @@ proc findNext {forward} {
 
     set item [$w.tree focus]
     if {$item ne ""} {
-        set nextitem [expr {$forward ? [$w.tree next $item] : [$w.tree prev $item]}]
+        set item [expr {$forward ? [$w.tree next $item] : [$w.tree prev $item]}]
     } else {
-        set nextitem [expr {$forward ? $state(item:first) : $state(item:last)}]
+        set item [expr {$forward ? $state(item:first) : $state(item:last)}]
     }
 
-    while {true} {
-        update
 
-        if {![winfo exists $w.find]} {
-            return
-        }
-        if {$forward && $nextitem eq ""} {
-            fileLoadContinue "anyway"
-            set nextitem [$w.tree next $item]
-            if {$nextitem eq "" && $state(dbf:count) < $state(dbf:limit)} {
-                continue
-            }
-        }
-        if {$nextitem eq ""} {
-            destroy $w.find
-            tk_messageBox -parent [winfo toplevel $w.tree] \
-                    -icon "info" -title "Find" -message "Not found"
-            break
-        }
-        set item $nextitem
-
-        $w.find.status configure -text [string cat "Row " [sheetRecordNo $item]]
+    while {$item ne ""} {
 
         foreach c $columns {
             set s [$w.tree set $item $c]
@@ -869,8 +790,10 @@ proc findNext {forward} {
                 return
             }
         }
-        set nextitem [expr {$forward ? [$w.tree next $item] : [$w.tree prev $item]}]
+        set item [expr {$forward ? [$w.tree next $item] : [$w.tree prev $item]}]
     }
+
+    $w.find.status configure -text "Not found"
 }
 
 try {
