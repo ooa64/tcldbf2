@@ -52,8 +52,6 @@ proc appInit {argc argv} {
             appThemeDark
         }
         ::ttk::setTheme $option(-theme) 
-        option add *Toplevel*foreground [ttk::style lookup . -foreground]
-        option add *Toplevel*background [ttk::style lookup . -background]
     }
     if {[string is double -strict $option(-scale)]} {
         set scale [expr {min( max( $option(-scale), 0.2 ), 5.0 )}]
@@ -157,6 +155,8 @@ proc appThemeDark {} {
     option add *TCombobox*Listbox.background $colors(-fieldbackground)
     option add *TCombobox*Listbox.selectForeground $colors(-selectforeground)
     option add *TCombobox*Listbox.selectBackground $colors(-selectbackground)
+    option add *Toplevel.foreground $colors(-foreground)
+    option add *Toplevel.background $colors(-background)
     option add *Canvas.background $colors(-background)
     option add *Canvas.highlightColor $colors(-selectbackground)
     option add *Canvas.highlightBackground $colors(-background)
@@ -211,6 +211,12 @@ proc appToplevelPlace {toplevel {grabfocus {}}} {
     }
 }
 
+proc appError {title message} {
+    bell
+    tk_messageBox -parent [lindex [wm stackorder .] end] \
+            -icon "error" -title "Error" -message $title -detail $message
+}
+
 proc windowCreate {toplevel} {
     global state option
 
@@ -238,9 +244,9 @@ proc windowCreate {toplevel} {
     $w.menu add cascade -menu $w.menu.file -label "File"
     $w.menu add cascade -menu $w.menu.view -label "View"
     $w.menu add cascade -menu $w.menu.help -label "Help"
-    $w.menu.file add command -command {fileOpen} -label "Open" -accelerator "$Ctrl-O"
+    $w.menu.file add command -command {sheetOpen} -label "Open" -accelerator "$Ctrl-O"
     $w.menu.file add separator
-    $w.menu.file add command -command {windowClose} -label "Quit" -accelerator "$Ctrl-Q" 
+    $w.menu.file add command -command {windowQuit} -label "Quit" -accelerator "$Ctrl-Q" 
     $w.menu.view add command -command {infoCreate} -label "Info" -accelerator "$Ctrl-I"
     $w.menu.view add command -command {recordCreate} -label "Record" -accelerator "$Enter"
     $w.menu.view add separator
@@ -255,19 +261,9 @@ proc windowCreate {toplevel} {
     $w.menu.help add command -command {appAbout} -label "About"
     $toplevel configure -menu $w.menu -takefocus 0 -bg [ttk::style lookup . -background]
 
-    ttk::treeview $w.tree -height $height \
-            -yscrollcommand "$w.vbar set" -xscrollcommand "$w.hbar set"
-    ttk::scrollbar $w.vbar -orient vertical -command "$w.tree yview"
-    ttk::scrollbar $w.hbar -orient horizontal -command "$w.tree xview"
-    ttk::label $w.status -anchor "w"
-    grid $w.tree $w.vbar -sticky "news"
-    grid $w.hbar "x" -sticky "we"
-    grid $w.status - -sticky "we"
+    sheetCreate
 
-    grid columnconfigure [winfo parent $w.tree] 0 -weight 1
-    grid rowconfigure [winfo parent $w.tree] 0 -weight 1
-
-    wm protocol $toplevel WM_DELETE_WINDOW {windowClose}
+    wm protocol $toplevel WM_DELETE_WINDOW {windowQuit}
     wm minsize $toplevel [expr {50*$x}] [expr {10*$y}]
     wm maxsize $toplevel [winfo vrootwidth $toplevel] [winfo vrootheight $toplevel]
     wm geometry $toplevel [format "%dx%d+%d+%d" \
@@ -276,14 +272,12 @@ proc windowCreate {toplevel} {
             [expr {max(([winfo screenheight $toplevel]-$option(-height)*$y)/2,0)}]]
     appToplevelBindings $toplevel
     windowToplevelBindings $toplevel
-    windowSheetBindings $toplevel
     wm deiconify $toplevel
     raise $toplevel
-    focus $toplevel
-    focus -force $w.tree
+    focus $w.tree
 }
 
-proc windowClose {} {
+proc windowQuit {} {
     global state
 
     if {[info exists state(dbf:handle)]} {
@@ -293,6 +287,9 @@ proc windowClose {} {
 }
 
 proc windowStatus {message} {
+    global state option
+    set w $state(window)
+
     $w.status configure -text $message
     update idletasks
 }
@@ -301,15 +298,15 @@ proc windowToplevelBindings {toplevel} {
     if {$::tcl_platform(os) eq "Darwin"} {
         # NOTE: use keycode bindings to ignore keyboard mode on mac
         bind $toplevel <Command-Key> \
-               {+switch %k 520093807 fileOpen 570425449 infoCreate 50331750  findCreate\
+               {+switch %k 520093807 sheetOpen 570425449 infoCreate 50331750  findCreate\
                         83886183 {findNext 1} 88080487 {findNext 0} 88080455 {findNext 0}}
     } else {
         if {[tk windowingsystem] eq "win32"} {
             # NOTE: use keycode bindings to ignore keyboard mode on windows
             bind $toplevel <Control-Key> \
-                    {+switch %k 79 fileOpen 81 windowClose 73 infoCreate 70 findCreate}
+                    {+switch %k 79 sheetOpen 81 windowQuit 73 infoCreate 70 findCreate}
         } else {
-            foreach {k c} {o fileOpen q windowClose i infoCreate f findCreate} {
+            foreach {k c} {o sheetOpen q windowQuit i infoCreate f findCreate} {
                 bind $toplevel <Control-$k> [list $c]
                 bind $toplevel <Control-[string toupper $k]> [list $c]
             }
@@ -319,10 +316,20 @@ proc windowToplevelBindings {toplevel} {
     }
 }
 
-proc windowSheetBindings {} {
-    global state
+proc sheetCreate {} {
+    global state option
     set w $state(window)
-    set x $state(font:width)
+
+    ttk::treeview $w.tree -yscrollcommand "$w.vbar set" -xscrollcommand "$w.hbar set"
+    ttk::scrollbar $w.vbar -orient vertical -command "$w.tree yview"
+    ttk::scrollbar $w.hbar -orient horizontal -command "$w.tree xview"
+    ttk::label $w.status -anchor "w"
+    grid $w.tree $w.vbar -sticky "news"
+    grid $w.hbar "x" -sticky "we"
+    grid $w.status - -sticky "we"
+
+    grid columnconfigure [winfo parent $w.tree] 0 -weight 1
+    grid rowconfigure [winfo parent $w.tree] 0 -weight 1
 
     bind $w.tree <Return> {+recordCreate}
     bind $w.tree <Double-1> {+recordCreate}
@@ -339,7 +346,7 @@ proc windowSheetBindings {} {
     bind $w.tree <Next> {after idle {sheetSelect [%W identify item {*}$::state(item:base)]}}
 }
 
-proc windowSheetOpen {{filename ""}} {
+proc sheetOpen {{filename ""}} {
     global state option
     set w $state(window)
     set x $state(font:width)
@@ -352,27 +359,27 @@ proc windowSheetOpen {{filename ""}} {
         return
     }
 
-    WindowSheetClose
-    WindowStatus "Opening $filename"
+    sheetClose
+    windowStatus "Opening $filename"
 
     try {
         fileOpen $filename $option(-encoding)
     } on error {message} {
-        tk_messageBox -parent [winfo toplevel $w.tree] \
-                -icon "error" -title "Error" -message $message
+        windowStatus ""
+        appError "Opening file" $message
         return
-    } finally {
-        WindowStatus ""
     }
 
     wm title [winfo toplevel $w.tree] \
             [string cat "DBF View - " [file nativename $state(dbf:name)]]
 
+    windowStatus ""
+
     sheetLoad
     sheetSelect $state(item:first)
 }
 
-proc windowSheetClose {} {
+proc sheetClose {} {
     global state
     set w $state(window)
 
@@ -381,70 +388,22 @@ proc windowSheetClose {} {
     set state(item:base) ""
     set state(item:first) ""
     set state(item:last) ""
-    set state(find:string) ""
-    set state(find:field) "all"
-    set state(find:nocase) "0"
-    set state(find:regexp) "0"
+    set state(item:count) 0
 
     wm title [winfo toplevel $w.tree] "DBF View"
     $w.tree delete [$w.tree children {}]
 
-    fileClose
-}
-
-proc windowSheetReload {} {
-    global state option
-    set w $state(window)
-
-    set filename $state(dbf:name)
-    set encoding $state(dbf:encoding)
-
-    $w.tree delete [$w.tree children {}]
-
-    fileClose
-    fileOpen $filename $encoding
-    fileLoadRows
-}
-
-proc sheetCreate {width height} {
-    global state
-    set w $state(window)
-
-    set state(item:base) ""
-    set state(item:first) ""
-    set state(item:last) ""
-    set state(find:string) ""
-    set state(find:field) "all"
-    set state(find:nocase) "0"
-    set state(find:regexp) "0"
-
-    ttk::treeview $w.tree -height $height \
-            -yscrollcommand "$w.vbar set" -xscrollcommand "$w.hbar set"
-    ttk::scrollbar $w.vbar -orient vertical -command "$w.tree yview"
-    ttk::scrollbar $w.hbar -orient horizontal -command "$w.tree xview"
-    ttk::label $w.status -anchor "w"
-    grid $w.tree $w.vbar -sticky "news"
-    grid $w.hbar "x" -sticky "we"
-    grid $w.status - -sticky "we"
-
-    grid columnconfigure [winfo parent $w.tree] 0 -weight 1
-    grid rowconfigure [winfo parent $w.tree] 0 -weight 1
-
-    after 1 [list focus -force $w.tree]
-}
-
-proc sheetDestroy {} {
-    global state
-    set w $state(window)
-
-    if {[winfo exists $w.tree]} {
-        destroy $w.tree $w.vbar $w.hbar $w.status
+    if {[info exists state(dbf:handle)]} {
+        fileClose
     }
 }
 
 proc sheetLoad {} {
-    global state
+    global state option
     set w $state(window)
+    set x $state(font:width)
+
+    windowStatus "Loading data ..."    
 
     # NOTE: use synthetic column names (1,2,...) to avoid duplicates
     set c 0
@@ -472,40 +431,77 @@ proc sheetLoad {} {
     foreach c [dict keys $columns] {
         $w.tree column $c -width [expr {min( [dict get $columns $c], 50 ) * $x + 8}]
     }
-    update idletasks
+
+    windowStatus "$state(item:count) rows loaded"    
 
     sheetLoadRows
+
+    windowStatus "$state(item:count) rows loaded"    
 }
 
-proc windowFileLoad {{count ""}} {
+proc sheetReload {} {
+    global state option
+    set w $state(window)
+
+    if {![info exists state(dbf:handle)]} {
+        return
+    }
+    set filename $state(dbf:name)
+    set encoding $state(dbf:encoding)
+
+    sheetClose
+    windowStatus "Reopening $filename"
+
+    try {
+        fileOpen $filename $encoding
+    } on error {message} {
+        windowStatus ""
+        sheetClose
+        appError "Reopening file" $message
+        return
+    }
+
+    windowStatus "Loading data ..."    
+
+    sheetLoadRows
+
+    windowStatus "$state(item:count) rows loaded"    
+}
+
+proc sheetLoadRows {{count ""}} {
     global state option
     set w $state(window)
     set h $state(dbf:handle)
 
-    windowStatus "Loading data ..."
-
     set item ""
-    set row $state(dbf:count)
-    set maxrow $state(dbf:size) [$h info records]
+    set row $state(item:count)
     if {$count ne ""} {
-        set maxrow [expr {min( $row + $count, $maxrow )}]
-    } 
-    while {$row < $maxrow} {
-        set item [$w.tree insert {} end \
-                -text [format "%1s%6d " \
-                        [expr {[$h deleted $row] ? "*" : " "}] \
-                        [expr {$row+1}]] \
-                -values [$h record $row]]
-        incr row
+        set maxrow [expr {min( $row + $count, $state(dbf:size) )}]
+    } else {
+        set maxrow $state(dbf:size)
     }
-    if {$state(dbf:count) == 0} {
+
+    try {
+        while {$row < $maxrow} {
+            set item [$w.tree insert {} end \
+                    -text [format "%1s%6d " \
+                            [expr {[fileDeletedRow $row] ? "*" : " "}] \
+                            [expr {$row+1}]] \
+                    -values [fileLoadRow $row]]
+            incr row
+        }
+    } on error {message} {
+        sheetClose
+        appError "Loading data" $message
+        return
+    }
+
+    if {$state(item:count) == 0 && $row > 0} {
         set state(item:first) [lindex [$w.tree children {}] 0]
         set state(item:base) [lmap i [lrange [$w.tree bbox $state(item:first)] 0 1] {incr i}]
     }
     set state(item:last) $item
-    set state(dbf:count) $row
-
-    windowStatus "$row rows loaded"
+    set state(item:count) $row
 }
 
 proc sheetSelect {item} {
@@ -567,7 +563,6 @@ proc recordCreate {} {
 
     bind $w.record <Escape> [list destroy $w.record]
 
-    update
     appToplevelPlace $w.record
     appToplevelBindings $w.record
     windowToplevelBindings $w.record
@@ -597,16 +592,12 @@ proc recordLoad {position} {
     }
     if {$position ne "focus"} {
         sheetSelect $item
-        update
         return
     }
+
     set r [sheetRecordNo $item]
     set c 0
     foreach f [$h fields] v [$w.tree "item" $item -values] {
-        update
-        if {![winfo exists $w.record] || $item ne [$w.tree focus]} {
-            return
-        }
         incr c
         lassign $f n - t
         switch -- $t {
@@ -616,8 +607,8 @@ proc recordLoad {position} {
                 }
             }
             "M" {
-                if {[string is integer -strict $r]} {
-                    catch {encoding convertfrom [$h encoding] [$h memo $r $n]} v
+                if {[string is integer -strict $v]} {
+                    catch {encoding convertfrom $state(dbf:encoding) [fileLoadRowMemo [expr {$r-1}] $n]} v
                 }
             }
         }
@@ -652,14 +643,13 @@ proc infoCreate {} {
     if {![appToplevelCreate $w.info "DBF Info"]} {
         return
     }
-    set h $state(dbf:handle)
 
     set i 0
     foreach {n v} [list \
         "Filename" [file tail $state(dbf:name)] \
         "Filesize" [file size $state(dbf:name)] \
-        "Records" [$h info records] \
-        "Codepage" [$h codepage] \
+        "Records" $state(dbf:size) \
+        "Codepage" $state(dbf:codepage) \
     ] {
         ttk::label $w.info.l$i -text $n -anchor "e"
         ttk::entry $w.info.e$i
@@ -673,7 +663,7 @@ proc infoCreate {} {
     ttk::combobox $w.info.encoding -values [lsort -dictionary [encoding names]]
     grid $w.info.l$i $w.info.encoding -sticky "we" -padx 4 -pady 2
 
-    $w.info.encoding insert end [$h encoding]
+    $w.info.encoding insert end $state(dbf:encoding)
     $w.info.encoding configure -state readonly
     set columns [dict create \
             field [expr {10*$x}] \
@@ -695,7 +685,7 @@ proc infoCreate {} {
         $w.info.t heading $n -text $n
         $w.info.t column $n -width [dict get $columns $n] -anchor "e"
     }
-    foreach f [$h fields] {
+    foreach f $state(dbf:fields) {
         $w.info.t insert {} end -values [lreplace $f 1 1]
     }
 
@@ -716,12 +706,14 @@ proc infoOk {} {
     }
 
     set e [$w.info.encoding get]
-    if {$e ne [$h encoding]} {
-        $h encoding $e
-        fileReload
+
+    destroy $w.info
+
+    if {$e ne $state(dbf:encoding)} {
+        set state(dbf:encoding) $e
+        sheetReload
         recordLoad "focus"
     } 
-    destroy $w.info
 }
 
 proc findCreate {} {
@@ -833,33 +825,61 @@ proc fileOpen {filename {encoding ""}} {
     global state
 
     dbf h -open $filename -readonly
-    if {$option(-encoding) ne ""} {
-        $h encoding $option(-encoding)
+    if {$encoding ne ""} {
+        $h encoding $encoding
     }
     set state(dbf:name) [file normalize $filename]
     set state(dbf:handle) $h
     set state(dbf:fields) [$h fields]
+    set state(dbf:codepage) [$h codepage]
+    set state(dbf:encoding) [$h encoding]
     set state(dbf:size) [$h info records]    
-    set state(dbf:count) 0
 }
 
 proc fileClose {} {
     global state
 
-    $state(dbf:handle) forget
+    catch {$state(dbf:handle) forget}
 
     array unset state dbf:*
 }
 
+proc fileLoadRow {row} {
+    global state
 
+    $state(dbf:handle) record $row
+}
+
+proc fileLoadRowMemo {row name} {
+    global state
+
+    $state(dbf:handle) memo $row $name
+}
+
+proc fileDeletedRow {row} {
+    global state
+
+    $state(dbf:handle) deleted $row
+}
 
 try {
     appInit $argc $argv
+    windowCreate .
 } on error {message} {
-    tk_messageBox -icon "error" -title "Startup error" -message $message
+    appError "Startup" $message
     exit 1
 }
 
-windowCreate .
+if {$tcl_platform(os) eq "Darwin"} {
+    namespace eval ::tk::mac {
+        proc OpenDocument {args} {
+            sheetOpen [lindex $args 0]
+        }
+    }
+}
 
-after 0 [list fileOpen $option(-filename)]
+if {$tcl_platform(os) ne "Darwin" || $option(-filename) ne ""} {
+    after 0 {
+        sheetOpen $option(-filename)
+    }
+}
