@@ -21,6 +21,13 @@ array set option {
     -debug 0
 }
 
+proc appAbout {} {
+    tk_messageBox -type "ok" -title "About" -message "DBF View 1.2" -detail "
+        Tcl [package require Tcl]
+        Tk [package require Tk]
+        Tcldbf [package require tcldbf]"
+}
+
 proc appInit {argc argv} {
     global state option
 
@@ -29,12 +36,16 @@ proc appInit {argc argv} {
     } else {
         array set option [linsert $argv end-1 "-filename"]
     }
+    if {![string is boolean -strict $option(-debug)]} {
+        set option(-debug) false
+        error "invalid -debug option"
+    }
     if {![string is integer -strict $option(-width)] || $option(-width) < 50 ||
             ![string is integer -strict $option(-height)] || $option(-height) < 10} {
-        error "invalid width/height option"
+        error "invalid -width/-height option"
     }
     if {![string is integer -strict $option(-explore)]} {
-        error "invalid explore option"
+        error "invalid -explore option"
     }
     if {$option(-theme) ne ""} {
         if {$option(-theme) eq "dark"} {
@@ -106,13 +117,6 @@ proc appInit {argc argv} {
     }
 }
 
-proc appAbout {} {
-    tk_messageBox -type "ok" -title "About" -message "DBF View 1.2" -detail "\n\
-            Tcl [package require Tcl]\n\
-            Tk [package require Tk]\n\
-            Tcldbf [package require tcldbf]\n"
-}
-
 proc appThemeDark {} {
     array set colors {
         -background #33393b
@@ -173,13 +177,19 @@ proc appWindowsCopyPasteFix {W K k} {
     }
 }
 
-proc appToplevelCreate {toplevel} {
+proc appToplevelCreate {toplevel title} {
     if {[winfo exists $toplevel]} {
         wm deiconify $toplevel
         return 0
     }
     toplevel $toplevel -height 1
+
+    wm withdraw $toplevel
+    wm transient $toplevel [winfo parent $toplevel]
+    wm title $toplevel $title
+
     $toplevel configure -width [winfo width [winfo parent $toplevel]]
+
     return 1
 }
 
@@ -210,6 +220,17 @@ proc windowCreate {toplevel} {
     set y $state(font:height)
     set w $state(window)
 
+    set state(item:base) ""
+    set state(item:first) ""
+    set state(item:last) ""
+    set state(find:string) ""
+    set state(find:field) "all"
+    set state(find:nocase) "0"
+    set state(find:regexp) "0"
+
+    set Ctrl [expr {$::tcl_platform(os) eq "Darwin" ? "Command" : "Ctrl"}]
+    set Enter [expr {$::tcl_platform(os) eq "Darwin" ? "Return" : "Enter"}]
+
     menu $w.menu
     menu $w.menu.file
     menu $w.menu.view
@@ -217,19 +238,34 @@ proc windowCreate {toplevel} {
     $w.menu add cascade -menu $w.menu.file -label "File"
     $w.menu add cascade -menu $w.menu.view -label "View"
     $w.menu add cascade -menu $w.menu.help -label "Help"
-    $w.menu.file add command -command {fileOpen} -label "Open" -accelerator "Ctrl-O"
+    $w.menu.file add command -command {fileOpen} -label "Open" -accelerator "$Ctrl-O"
     $w.menu.file add separator
-    $w.menu.file add command -command {windowClose} -label "Quit" -accelerator "Ctrl-Q" 
-    $w.menu.view add command -command {infoCreate} -label "Info" -accelerator "Ctrl-I"
-    $w.menu.view add command -command {recordCreate} -label "Record" -accelerator "Enter"
+    $w.menu.file add command -command {windowClose} -label "Quit" -accelerator "$Ctrl-Q" 
+    $w.menu.view add command -command {infoCreate} -label "Info" -accelerator "$Ctrl-I"
+    $w.menu.view add command -command {recordCreate} -label "Record" -accelerator "$Enter"
     $w.menu.view add separator
-    $w.menu.view add command -command {findCreate} -label "Find" -accelerator "Ctrl-F"
-    $w.menu.view add command -command {findNext 0} -label "Find Prev" -accelerator "Shift-F3"
-    $w.menu.view add command -command {findNext 1} -label "Find Next" -accelerator "F3"
+    $w.menu.view add command -command {findCreate} -label "Find" -accelerator "$Ctrl-F"
+    if {$::tcl_platform(os) eq "Darwin"} {
+        $w.menu.view add command -command {findNext 1} -label "Find Next" -accelerator "$Ctrl-G"
+        $w.menu.view add command -command {findNext 0} -label "Find Prev" -accelerator "$Ctrl-Shift-G"
+    } else {
+        $w.menu.view add command -command {findNext 0} -label "Find Prev" -accelerator "Shift-F3"
+        $w.menu.view add command -command {findNext 1} -label "Find Next" -accelerator "F3"
+    }
     $w.menu.help add command -command {appAbout} -label "About"
     $toplevel configure -menu $w.menu -takefocus 0 -bg [ttk::style lookup . -background]
 
-    sheetCreate 50 10
+    ttk::treeview $w.tree -height $height \
+            -yscrollcommand "$w.vbar set" -xscrollcommand "$w.hbar set"
+    ttk::scrollbar $w.vbar -orient vertical -command "$w.tree yview"
+    ttk::scrollbar $w.hbar -orient horizontal -command "$w.tree xview"
+    ttk::label $w.status -anchor "w"
+    grid $w.tree $w.vbar -sticky "news"
+    grid $w.hbar "x" -sticky "we"
+    grid $w.status - -sticky "we"
+
+    grid columnconfigure [winfo parent $w.tree] 0 -weight 1
+    grid rowconfigure [winfo parent $w.tree] 0 -weight 1
 
     wm protocol $toplevel WM_DELETE_WINDOW {windowClose}
     wm minsize $toplevel [expr {50*$x}] [expr {10*$y}]
@@ -240,9 +276,11 @@ proc windowCreate {toplevel} {
             [expr {max(([winfo screenheight $toplevel]-$option(-height)*$y)/2,0)}]]
     appToplevelBindings $toplevel
     windowToplevelBindings $toplevel
+    windowSheetBindings $toplevel
     wm deiconify $toplevel
     raise $toplevel
     focus $toplevel
+    focus -force $w.tree
 }
 
 proc windowClose {} {
@@ -254,19 +292,118 @@ proc windowClose {} {
     exit
 }
 
+proc windowStatus {message} {
+    $w.status configure -text $message
+    update idletasks
+}
+
 proc windowToplevelBindings {toplevel} {
-    if {[tk windowingsystem] eq "win32"} {
-        # NOTE: use keycode bindings to ignore keyboard mode on windows
-        bind $toplevel <Control-Key> \
-                {+switch %k 79 fileOpen 81 windowClose 73 infoCreate 70 findCreate}
+    if {$::tcl_platform(os) eq "Darwin"} {
+        # NOTE: use keycode bindings to ignore keyboard mode on mac
+        bind $toplevel <Command-Key> \
+               {+switch %k 520093807 fileOpen 570425449 infoCreate 50331750  findCreate\
+                        83886183 {findNext 1} 88080487 {findNext 0} 88080455 {findNext 0}}
     } else {
-        foreach {k c} {o fileOpen q windowClose i infoCreate f findCreate} {
-            bind $toplevel <Control-$k> [list $c]
-            bind $toplevel <Control-[string toupper $k]> [list $c]
+        if {[tk windowingsystem] eq "win32"} {
+            # NOTE: use keycode bindings to ignore keyboard mode on windows
+            bind $toplevel <Control-Key> \
+                    {+switch %k 79 fileOpen 81 windowClose 73 infoCreate 70 findCreate}
+        } else {
+            foreach {k c} {o fileOpen q windowClose i infoCreate f findCreate} {
+                bind $toplevel <Control-$k> [list $c]
+                bind $toplevel <Control-[string toupper $k]> [list $c]
+            }
         }
+        bind $toplevel <F3> {findNext 1}
+        bind $toplevel <Shift-F3> {findNext 0}
     }
-    bind $toplevel <F3> {findNext 1}
-    bind $toplevel <Shift-F3> {findNext 0}
+}
+
+proc windowSheetBindings {} {
+    global state
+    set w $state(window)
+    set x $state(font:width)
+
+    bind $w.tree <Return> {+recordCreate}
+    bind $w.tree <Double-1> {+recordCreate}
+    bind $w.tree <<TreeviewSelect>> {+recordLoad focus}
+
+    if {$::tcl_platform(os) eq "Darwin"} {
+        bind $w.tree <Command-Left> {sheetSelect $::state(item:first); break}
+        bind $w.tree <Command-Right> {sheetSelect $::state(item:last); break}
+    } else {
+        bind $w.tree <Control-Home> {sheetSelect $::state(item:first); break}
+        bind $w.tree <Control-End> {sheetSelect $::state(item:last); break}
+    }
+    bind $w.tree <Prior> {after idle {sheetSelect [%W identify item {*}$::state(item:base)]}}
+    bind $w.tree <Next> {after idle {sheetSelect [%W identify item {*}$::state(item:base)]}}
+}
+
+proc windowSheetOpen {{filename ""}} {
+    global state option
+    set w $state(window)
+    set x $state(font:width)
+
+    if {$filename eq ""} {
+        set filename [tk_getOpenFile -parent [winfo parent $w.tree] \
+                -filetypes {{"DBF files" {.dbf .DBF}} {"All files" *}}]
+    }
+    if {$filename eq ""} {
+        return
+    }
+
+    WindowSheetClose
+    WindowStatus "Opening $filename"
+
+    try {
+        fileOpen $filename $option(-encoding)
+    } on error {message} {
+        tk_messageBox -parent [winfo toplevel $w.tree] \
+                -icon "error" -title "Error" -message $message
+        return
+    } finally {
+        WindowStatus ""
+    }
+
+    wm title [winfo toplevel $w.tree] \
+            [string cat "DBF View - " [file nativename $state(dbf:name)]]
+
+    sheetLoad
+    sheetSelect $state(item:first)
+}
+
+proc windowSheetClose {} {
+    global state
+    set w $state(window)
+
+    recordDestroy
+
+    set state(item:base) ""
+    set state(item:first) ""
+    set state(item:last) ""
+    set state(find:string) ""
+    set state(find:field) "all"
+    set state(find:nocase) "0"
+    set state(find:regexp) "0"
+
+    wm title [winfo toplevel $w.tree] "DBF View"
+    $w.tree delete [$w.tree children {}]
+
+    fileClose
+}
+
+proc windowSheetReload {} {
+    global state option
+    set w $state(window)
+
+    set filename $state(dbf:name)
+    set encoding $state(dbf:encoding)
+
+    $w.tree delete [$w.tree children {}]
+
+    fileClose
+    fileOpen $filename $encoding
+    fileLoadRows
 }
 
 proc sheetCreate {width height} {
@@ -305,20 +442,70 @@ proc sheetDestroy {} {
     }
 }
 
-proc sheetBindings {} {
+proc sheetLoad {} {
     global state
     set w $state(window)
-    set x $state(font:width)
 
-    bind $w.tree <Return> {+recordCreate}
-    bind $w.tree <Double-1> {+recordCreate}
-    bind $w.tree <<TreeviewSelect>> {+recordLoad focus}
+    # NOTE: use synthetic column names (1,2,...) to avoid duplicates
+    set c 0
+    $w.tree configure -columns [concat [lmap f $state(dbf:fields) {incr c}] [list \#end]]
+    $w.tree column \#0 -width [expr {8*$x+$x}] -minwidth [expr {8*$x+$x}] -stretch 0 -anchor "e"
+    $w.tree column \#end -minwidth 0 -width 0 -stretch 1
 
-    bind $w.tree <Control-Home> {sheetSelect $::state(item:first); break}
-    bind $w.tree <Control-End> {sheetSelect $::state(item:last); break}
+    set c 0
+    set columns [dict create]
+    foreach f $state(dbf:fields) {
+        incr c
+        lassign $f n - t s
+        $w.tree heading $c -text $n
+        $w.tree column $c -stretch 0 -anchor [expr {$t in {F M L N} ? "e" : "w"}]
+        dict set columns $c [string length $n]
+    }
 
-    bind $w.tree <Prior> {after idle {sheetSelect [%W identify item {*}$::state(item:base)]}}
-    bind $w.tree <Next> {after idle {sheetSelect [%W identify item {*}$::state(item:base)]}}
+    sheetLoadRows $option(-explore)
+
+    foreach row [$w.tree children {}] {
+        foreach c [dict keys $columns] v [$w.tree item $row -values] {
+            dict set columns $c [expr {max( [dict get $columns $c], [string length $v] )}]
+        }
+    }
+    foreach c [dict keys $columns] {
+        $w.tree column $c -width [expr {min( [dict get $columns $c], 50 ) * $x + 8}]
+    }
+    update idletasks
+
+    sheetLoadRows
+}
+
+proc windowFileLoad {{count ""}} {
+    global state option
+    set w $state(window)
+    set h $state(dbf:handle)
+
+    windowStatus "Loading data ..."
+
+    set item ""
+    set row $state(dbf:count)
+    set maxrow $state(dbf:size) [$h info records]
+    if {$count ne ""} {
+        set maxrow [expr {min( $row + $count, $maxrow )}]
+    } 
+    while {$row < $maxrow} {
+        set item [$w.tree insert {} end \
+                -text [format "%1s%6d " \
+                        [expr {[$h deleted $row] ? "*" : " "}] \
+                        [expr {$row+1}]] \
+                -values [$h record $row]]
+        incr row
+    }
+    if {$state(dbf:count) == 0} {
+        set state(item:first) [lindex [$w.tree children {}] 0]
+        set state(item:base) [lmap i [lrange [$w.tree bbox $state(item:first)] 0 1] {incr i}]
+    }
+    set state(item:last) $item
+    set state(dbf:count) $row
+
+    windowStatus "$row rows loaded"
 }
 
 proc sheetSelect {item} {
@@ -339,152 +526,6 @@ proc sheetRecordNo {item} {
     regsub -all {[^\d]*} [$w.tree "item" $item -text] ""
 }
 
-proc fileOpen {{filename ""}} {
-    global state option
-    set w $state(window)
-    set x $state(font:width)
-
-    if {$filename eq ""} {
-        set filename [tk_getOpenFile -parent [winfo parent $w.tree] \
-                -filetypes {{"DBF files" {.dbf .DBF}} {"All files" *}}]
-    }
-    if {$filename eq ""} {
-        return
-    }
-
-    fileClose
-
-    $w.status configure -text "Opening $filename"
-    update idletasks
-
-    try {
-        dbf h -open $filename -readonly
-        if {$option(-encoding) ne ""} {
-            $h encoding $option(-encoding)
-        }
-    } on error {message} {
-        tk_messageBox -parent [winfo toplevel $w.tree] \
-                -icon "error" -title "Error" -message $message
-        return
-    } finally {
-        $w.status configure -text ""
-    }
-
-    wm title [winfo toplevel $w.tree] \
-            [string cat "DBF View - " [file nativename [file normalize $filename]]]
-
-    set state(dbf:handle) $h
-    set state(dbf:name) [file normalize $filename]
-    set state(dbf:count) 0
-
-    set fields [$h fields]
-    set columns [dict create]
-
-    # NOTE: use synthetic column names (1,2,...) to avoid duplicated names
-
-    set c 0
-    $w.tree configure -columns [concat [lmap f $fields {incr c}] [list \#end]]
-    $w.tree column \#0 -width [expr {8*$x+$x}] -minwidth [expr {8*$x+$x}] -stretch 0 -anchor "e"
-    $w.tree column \#end -minwidth 0 -width 0 -stretch 1
-
-    set c 0
-    foreach f $fields {
-        incr c
-        lassign $f n - t s
-        $w.tree heading $c -text $n
-        $w.tree column $c -stretch 0 -anchor [expr {$t in {F M L N} ? "e" : "w"}]
-        dict set columns $c [string length $n]
-    }
-
-    fileLoadRows $option(-explore)
-
-    foreach row [$w.tree children {}] {
-        foreach c [dict keys $columns] v [$w.tree item $row -values] {
-            dict set columns $c [expr {max( [dict get $columns $c], [string length $v] )}]
-        }
-    }
-    foreach c [dict keys $columns] {
-        $w.tree column $c -width [expr {min( [dict get $columns $c], 50 ) * $x + 8}]
-    }
-
-    update idle
-
-    fileLoadRows
-
-    sheetBindings
-    sheetSelect $state(item:first)
-}
-
-proc fileClose {} {
-    global state
-
-    if {![info exists state(dbf:handle)]} {
-        return
-    }
-
-    wm title [winfo toplevel $state(window).tree] "DBF View"
-    
-    recordDestroy
-    sheetDestroy
-    $state(dbf:handle) forget
-
-    array unset state dbf:*
-
-    sheetCreate 50 10
-}
-
-proc fileReload {} {
-    global state option
-
-    if {![info exists state(dbf:handle)]} {
-        return
-    }
-    set w $state(window)
-    set h $state(dbf:handle)
-
-    $w.tree delete [$w.tree children {}]
-
-    set state(dbf:count) 0
-    set state(item:base) ""
-    set state(item:first) ""
-    set state(item:last) ""
-
-    fileLoadRows
-}
-
-proc fileLoadRows {{count ""}} {
-    global state option
-    set w $state(window)
-    set h $state(dbf:handle)
-
-    $w.status configure -text "Loading data ..."
-    update idle
-
-    set item ""
-    set row $state(dbf:count)
-    set maxrow [$h info records]
-    if {$count ne ""} {
-        set maxrow [expr {min( $row + $count, $maxrow )}]
-    } 
-    while {$row < $maxrow} {
-        set item [$w.tree insert {} end \
-                -text [format "%1s%6d " \
-                        [expr {[$h deleted $row] ? "*" : " "}] \
-                        [expr {$row+1}]] \
-                -values [$h record $row]]
-        incr row
-    }
-    if {$state(dbf:count) == 0} {
-        set state(item:first) [lindex [$w.tree children {}] 0]
-        set state(item:base) [lmap i [lrange [$w.tree bbox $state(item:first)] 0 1] {incr i}]
-    }
-    set state(item:last) $item
-    set state(dbf:count) $row
-
-    $w.status configure -text "$row rows loaded"
-    update idle
-}
-
 proc recordCreate {} {
     global state
     set w $state(window)
@@ -494,10 +535,9 @@ proc recordCreate {} {
     if {![info exists state(dbf:handle)]} {
         return
     }
-    if {![appToplevelCreate $w.record]} {
+    if {![appToplevelCreate $w.record "DBF Record"]} {
         return
     }
-    wm withdraw $w.record
 
     canvas $w.record.c -height 1 -width 1 -yscrollcommand "$w.record.v set"
     ttk::scrollbar $w.record.v -command "$w.record.c yview"
@@ -527,12 +567,10 @@ proc recordCreate {} {
 
     bind $w.record <Escape> [list destroy $w.record]
 
-    wm title $w.record "DBF Record"
-    wm transient $w.record [winfo parent $w.record]
-
-    windowToplevelBindings $w.record
-    appToplevelBindings $w.record
+    update
     appToplevelPlace $w.record
+    appToplevelBindings $w.record
+    windowToplevelBindings $w.record
 
     recordLoad "focus"
 }
@@ -549,6 +587,7 @@ proc recordLoad {position} {
     set item [$w.tree focus]
     if {$item eq ""} {
         destroy $w.record
+        return
     }
     switch -- $position {
         "first" {set item $state(item:first)}
@@ -610,7 +649,7 @@ proc infoCreate {} {
     if {![info exists state(dbf:handle)]} {
         return
     }
-    if {![appToplevelCreate $w.info]} {
+    if {![appToplevelCreate $w.info "DBF Info"]} {
         return
     }
     set h $state(dbf:handle)
@@ -662,8 +701,6 @@ proc infoCreate {} {
 
     bind $w.info <Escape> [list destroy $w.info]
 
-    wm title $w.info "DBF Info"
-
     update
     appToplevelPlace $w.info $w.info.ok
     appToplevelBindings $w.info
@@ -694,7 +731,7 @@ proc findCreate {} {
     if {![info exists state(dbf:handle)]} {
         return
     }
-    if {![appToplevelCreate $w.find]} {
+    if {![appToplevelCreate $w.find "DBF Find"]} {
         return
     }
 
@@ -726,9 +763,6 @@ proc findCreate {} {
     bind $w.find <Key> [list $w.find.status configure -text ""]
     bind $w.find <Button> [list $w.find.status configure -text ""]
 
-    wm title $w.find "DBF Find"
-    wm transient $w.find [winfo parent $w.find]
-
     update
     appToplevelPlace $w.find $w.find.string
     appToplevelBindings $w.find
@@ -749,7 +783,7 @@ proc findNext {forward} {
     }
 
     $w.find.status configure -text "Searching..."
-    update idle
+    update idletasks
 
     set i [lsearch -index 0 [$state(dbf:handle) fields] $state(find:field)]
     if {$i >= 0} {
@@ -764,7 +798,6 @@ proc findNext {forward} {
     } else {
         set item [expr {$forward ? $state(item:first) : $state(item:last)}]
     }
-
 
     while {$item ne ""} {
 
@@ -795,6 +828,30 @@ proc findNext {forward} {
 
     $w.find.status configure -text "Not found"
 }
+
+proc fileOpen {filename {encoding ""}} {
+    global state
+
+    dbf h -open $filename -readonly
+    if {$option(-encoding) ne ""} {
+        $h encoding $option(-encoding)
+    }
+    set state(dbf:name) [file normalize $filename]
+    set state(dbf:handle) $h
+    set state(dbf:fields) [$h fields]
+    set state(dbf:size) [$h info records]    
+    set state(dbf:count) 0
+}
+
+proc fileClose {} {
+    global state
+
+    $state(dbf:handle) forget
+
+    array unset state dbf:*
+}
+
+
 
 try {
     appInit $argc $argv
