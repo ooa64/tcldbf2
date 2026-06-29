@@ -752,12 +752,23 @@ proc findCreate {} {
 
     bind $w.find.string <Return> [list findNext 1]
     bind $w.find <Escape> [list destroy $w.find]
-    bind $w.find <Key> [list $w.find.status configure -text ""]
-    bind $w.find <Button> [list $w.find.status configure -text ""]
+    bind $w.find <Key> [list findStatus ""]
+    bind $w.find <Button> [list findStatus ""]
 
     update
     appToplevelPlace $w.find $w.find.string
     appToplevelBindings $w.find
+}
+
+proc findStatus {message} {
+    global state
+    set w $state(window)
+
+    if {![winfo exists $w.find]} {
+        return
+    }
+    $w.find.status configure -text $message
+    update idletasks
 }
 
 proc findNext {forward} {
@@ -774,8 +785,7 @@ proc findNext {forward} {
         return
     }
 
-    $w.find.status configure -text "Searching..."
-    update idletasks
+    findStatus "Searching..."
 
     set i [lsearch -index 0 [$state(dbf:handle) fields] $state(find:field)]
     if {$i >= 0} {
@@ -818,7 +828,7 @@ proc findNext {forward} {
         set item [expr {$forward ? [$w.tree next $item] : [$w.tree prev $item]}]
     }
 
-    $w.find.status configure -text "Not found"
+    findStatus "Not found"
 }
 
 proc fileOpen {filename {encoding ""}} {
