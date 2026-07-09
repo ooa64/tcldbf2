@@ -23,7 +23,7 @@ array set option {
 }
 
 proc appAbout {} {
-    tk_messageBox -type "ok" -title "About" -message "DBF Edit 0.1" -detail "
+    tk_messageBox -type "ok" -title "About" -message "DBF Edit 0.2" -detail "
         Tcl [package require Tcl]
         Tk [package require Tk]
         Tktable [package require Tktable]
@@ -205,7 +205,7 @@ proc windowCreate {toplevel} {
     table $w.table -cols 0 -rows 0 \
         -titlecols 1 -titlerows 1 -colorigin -1 -roworigin -1 \
         -xscrollcommand "$w.hbar set" -yscrollcommand "$w.vbar set" \
-        -validatecommand {windowValidate %c %S} -validate 1 \
+        -validatecommand {windowValidate %c "%S"} -validate 1 \
         -command {windowCell %i %r %c %s} -cache 1 \
         -selectmode extended -state disabled \
         -rowseparator \n -colseparator \t \
