@@ -767,4 +767,47 @@ test command-4.7.4 {codepage after open} -constraints tcltestEncodingOk -setup {
    list [$d codepage] [$d record 0] [$d record 1]
 } -result {LDID/201 Йцукенгшщз Йцукенгшщз}
 
+test command-4.8.0 {truncation enabled after create} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   $d add S C 10
+   $d insert 0 { C }
+   $d record 0
+} -result {C}
+
+test command-4.8.1 {truncation disabled after create} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf] -notrim
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   $d add S C 10
+   $d insert 0 { C }
+   $d record 0
+} -result {{ C}}
+
+test command-4.8.2 {truncation enabled after open} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]; $d forget
+   dbf d -open [file join [temporaryDirectory] test.dbf]
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   $d add S C 10
+   $d insert 0 { C }
+   $d record 0
+} -result {C}
+
+test command-4.8.3 {truncation disabled after open} -setup {
+   dbf d -create [file join [temporaryDirectory] test.dbf]; $d forget
+   dbf d -open [file join [temporaryDirectory] test.dbf] -notrim
+} -cleanup {
+   $d forget; unset d; file delete [file join [temporaryDirectory] test.dbf]
+} -body {
+   $d add S C 10
+   $d insert 0 { C}
+   $d record 0
+} -result {{ C}}
+
+
 cleanupTests

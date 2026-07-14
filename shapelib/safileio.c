@@ -103,6 +103,7 @@ void SASetupDefaultHooks(SAHooks *psHooks)
     psHooks->Error = SADError;
     psHooks->Atof = atof;
     psHooks->bKeepFileExtension = 0;
+    psHooks->bKeepLeadWhitespace = 0;
     psHooks->pvUserData = SHPLIB_NULLPTR;
 }
 
@@ -185,6 +186,7 @@ void SASetupUtf8Hooks(SAHooks *psHooks)
     psHooks->Error = SADError;
     psHooks->Atof = atof;
     psHooks->bKeepFileExtension = 0;
+    psHooks->bKeepLeadWhitespace = 0;
     psHooks->pvUserData = SHPLIB_NULLPTR;
 }
 #endif

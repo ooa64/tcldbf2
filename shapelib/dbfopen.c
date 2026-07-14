@@ -1159,8 +1159,9 @@ static void *DBFReadAttribute(DBFHandle psDBF, int hEntity, int iField,
         char *pchSrc = psDBF->pszWorkField;
         char *pchDst = pchSrc;
 
-        while (*pchSrc == ' ')
-            pchSrc++;
+        if (!psDBF->sHooks.bKeepLeadWhitespace)
+            while (*pchSrc == ' ')
+                pchSrc++;
 
         while (*pchSrc != '\0')
             *(pchDst++) = *(pchSrc++);

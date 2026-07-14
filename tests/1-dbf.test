@@ -33,17 +33,35 @@ test dbf-1.10 "usage 'dbf create with opts'" -returnCodes 1 -body {
    dbf d -foo bar
 } -result {wrong # args: should be "dbf d -create|-open <filename> ?option?"}
 
-test dbf-1.11 "usage 'dbf create with opts'" -returnCodes 1 -body {
-   dbf d -create foo -codepage
-} -result {wrong # args: should be "dbf d -create <filename> ?-codepage <codepage>?"}
+foreach {n c} {
+   11  {-bar}
+   12  {-bar baz}
+   13  {-codepage}
+   14  {-codepage xxx -bar}
+   15  {-bar baz -notrim}
+   16  {-notrim bar}
+   18  {-notrim -codepage xxx}
+   17  {-codepage xxx -notrim -bar}
+} {
+   test dbf-1.$n "usage 'dbf create with wrong opts'" -returnCodes 1 -body {
+      dbf d -create foo {*}$c
+   } -result {wrong # args: should be "dbf d -create <filename> ?-codepage <codepage>? ?-notrim?"}
+   unset n c
+}
 
-test dbf-1.12 "usage 'dbf create with opts2'" -returnCodes 1 -body {
-   dbf d -create foo -bar baz
-} -result {wrong # args: should be "dbf d -create <filename> ?-codepage <codepage>?"}
-
-test dbf-1.13 "usage 'dbf open with opts'" -returnCodes 1 -body {
-   dbf d -open foo -bar
-} -result {wrong # args: should be "dbf d -open <filename> ?-readonly?"}
+foreach {n c} {
+   18  {-bar}
+   19  {-readonly -bar}
+   20  {-bar -notrim}
+   21  {-notrim -bar}
+   22  {-notrim -readonly}
+   23  {-readonly -notrim -bar}
+} {
+   test dbf-1.$n "usage 'dbf open with wrong opts'" -returnCodes 1 -body {
+      dbf d -open foo {*}$c
+   } -result {wrong # args: should be "dbf d -open <filename> ?-readonly? ?-notrim?"}
+   unset n c
+}
 
 # create / open errors
 

@@ -19,15 +19,16 @@ This command adds the **dbf** command to the tcl interpreter in compatibility mo
 
 ## DBF SYNTAX:
 
-+ **dbf** *varname* -open *dbf-file* ?-readonly?
++ **dbf** *varname* -open *dbf-file* ?-readonly? ?-notrim?
 
 Opens dbase file and creates new tcl **command** to access file content.
+Optionally, prevent leading spaces from being truncated when reading character fields.
 New **command** name is assigned to the variable *varname*.
 Returns new **command** name.
 
 Compatibility mode: command returns 1 on success, 0 on failure.
 
-+ **dbf** *varname* -create *dbf-file* ?-codepage *dbf-codepage*?
++ **dbf** *varname* -create *dbf-file* ?-codepage *dbf-codepage*? ?-notrim?
 
 Creates empty dbase file.
 Optional codepage can be specified as string LDID/*code* (see CODEPAGES below). 

@@ -10,10 +10,10 @@
 #endif
 
 /*
-  dbf d -open $input_file [-readonly]
+  dbf d -open $input_file [-readonly] [-notrim]
     opens dbase file, returns a handle.
 
-  dbf d -create $input_file [-codepage $codepage]
+  dbf d -create $input_file [-codepage $codepage] [-notrim]
     creates dbase file, returns a handle
 */
 
@@ -31,7 +31,8 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
   DBFHandle dbf;
   SAHooks sHooks;
   SASetupDefaultHooks(&sHooks);
-  sHooks.bKeepFileExtension = !compatible; 
+  sHooks.bKeepFileExtension = !compatible;
+  sHooks.bKeepLeadWhitespace = 0;
   Tcl_DString s;
   Tcl_DString e;
   Tcl_DStringInit(&s);
@@ -47,8 +48,15 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
     const char * codepage = "LDID/87"; /* 87 - ANSI */
     if (objc == 6 && strcmp(Tcl_GetString(objv[4]), "-codepage") == 0) {
       codepage = Tcl_GetString(objv[5]);
-    } else if (objc > 4) {
-      Tcl_WrongNumArgs(tclInterp, 3, objv, "<filename> ?-codepage <codepage>?");
+    } else if (objc == 5 && strcmp(Tcl_GetString(objv[4]), "-notrim") == 0) {
+      sHooks.bKeepLeadWhitespace = 1;
+    } else if (objc == 7 &&
+        strcmp(Tcl_GetString(objv[4]), "-codepage") == 0 &&
+        strcmp(Tcl_GetString(objv[6]), "-notrim") == 0) {
+      codepage = Tcl_GetString(objv[5]);
+      sHooks.bKeepLeadWhitespace = 1;
+    } else if (objc != 4) {
+      Tcl_WrongNumArgs(tclInterp, 3, objv, "<filename> ?-codepage <codepage>? ?-notrim?");
       goto exit;
     }
 
@@ -71,8 +79,15 @@ int TclDbfCmd::Command (int objc, Tcl_Obj * const objv[]) {
     const char * openmode = "rb+";
     if (objc == 5 && strcmp(Tcl_GetString(objv[4]), "-readonly") == 0) {
       openmode = "rb";
-    } else if (objc > 4) {
-      Tcl_WrongNumArgs(tclInterp, 3, objv, "<filename> ?-readonly?");
+    } else if (objc == 5 && strcmp(Tcl_GetString(objv[4]), "-notrim") == 0) {
+      sHooks.bKeepLeadWhitespace = 1;
+    } else if (objc == 6 &&
+        strcmp(Tcl_GetString(objv[4]), "-readonly") == 0 &&
+        strcmp(Tcl_GetString(objv[5]), "-notrim") == 0) {
+      openmode = "rb";
+      sHooks.bKeepLeadWhitespace = 1;
+    } else if (objc != 4) {
+      Tcl_WrongNumArgs(tclInterp, 3, objv, "<filename> ?-readonly? ?-notrim?");
       goto exit;
     }
 
