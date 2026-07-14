@@ -1,6 +1,6 @@
 diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
 --- ./shapelib-orig/dbfopen.c	2025-07-27 14:00:39.172000000 +0300
-+++ ./shapelib/dbfopen.c	2025-07-27 14:10:13.212159567 +0300
++++ ./shapelib/dbfopen.c	2026-07-14 12:30:19.189485833 +0300
 @@ -93,7 +93,7 @@
      /* -------------------------------------------------------------------- */
      /*      Initialize the file header information.                         */
@@ -244,7 +244,15 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
              return -1;
          }
      }
-@@ -1218,6 +1268,55 @@
+@@ -1109,6 +1159,7 @@
+         char *pchSrc = psDBF->pszWorkField;
+         char *pchDst = pchSrc;
+ 
++        if (!psDBF->sHooks.bKeepLeadWhitespace)
+         while (*pchSrc == ' ')
+             pchSrc++;
+ 
+@@ -1218,6 +1269,55 @@
  }
  
  /************************************************************************/
@@ -300,7 +308,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
  /*                         DBFIsValueNULL()                             */
  /*                                                                      */
  /*      Return TRUE if the passed string is NULL.                       */
-@@ -2085,7 +2184,7 @@
+@@ -2085,7 +2185,7 @@
          free(pszHeaderNew);
          free(pszRecord);
          free(pszRecordNew);
@@ -311,7 +319,7 @@ diff -bur ./shapelib-orig/dbfopen.c ./shapelib/dbfopen.c
  
 diff -bur ./shapelib-orig/safileio.c ./shapelib/safileio.c
 --- ./shapelib-orig/safileio.c	2024-12-21 14:33:34.041000000 +0200
-+++ ./shapelib/safileio.c	2025-01-18 10:49:48.957938758 +0200
++++ ./shapelib/safileio.c	2026-07-14 12:30:19.189485833 +0300
 @@ -83,8 +83,9 @@
      return remove(filename);
  }
@@ -323,26 +331,28 @@ diff -bur ./shapelib-orig/safileio.c ./shapelib/safileio.c
      fprintf(stderr, "%s\n", message);
  }
  
-@@ -101,6 +102,7 @@
+@@ -101,6 +102,8 @@
  
      psHooks->Error = SADError;
      psHooks->Atof = atof;
 +    psHooks->bKeepFileExtension = 0;
++    psHooks->bKeepLeadWhitespace = 0;
      psHooks->pvUserData = SHPLIB_NULLPTR;
  }
  
-@@ -182,6 +184,7 @@
+@@ -182,6 +185,8 @@
  
      psHooks->Error = SADError;
      psHooks->Atof = atof;
 +    psHooks->bKeepFileExtension = 0;
++    psHooks->bKeepLeadWhitespace = 0;
      psHooks->pvUserData = SHPLIB_NULLPTR;
  }
  #endif
 diff -bur ./shapelib-orig/shapefil.h ./shapelib/shapefil.h
---- ./shapelib-orig/shapefil.h	2024-12-21 14:33:34.041000000 +0200
-+++ ./shapelib/shapefil.h	2025-02-22 17:20:32.214343568 +0200
-@@ -146,8 +146,9 @@
+--- ./shapelib-orig/shapefil.h	2026-07-14 12:33:03.417000000 +0300
++++ ./shapelib/shapefil.h	2026-07-14 12:30:19.189485833 +0300
+@@ -146,8 +146,10 @@
          int (*FClose)(SAFile file);
          int (*Remove)(const char *filename, void *pvUserData);
  
@@ -350,10 +360,11 @@ diff -bur ./shapelib-orig/shapefil.h ./shapelib/shapefil.h
 +        void (*Error)(const char *message, void *pvUserData);
          double (*Atof)(const char *str);
 +        int bKeepFileExtension;
++        int bKeepLeadWhitespace;
          void *pvUserData;
      } SAHooks;
  
-@@ -425,6 +426,11 @@
+@@ -425,6 +427,11 @@
  
          SAFile fp;
  
@@ -365,7 +376,7 @@ diff -bur ./shapelib-orig/shapefil.h ./shapelib/shapefil.h
          int nRecords;
  
          int nRecordLength; /* Must fit on uint16 */
-@@ -534,6 +540,8 @@
+@@ -534,6 +541,8 @@
          DBFReadLogicalAttribute(DBFHandle hDBF, int iShape, int iField);
      SHPDate SHPAPI_CALL DBFReadDateAttribute(DBFHandle hDBF, int iShape,
                                               int iField);

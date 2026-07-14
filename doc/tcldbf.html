@@ -107,17 +107,18 @@ The <strong>dbf</strong> command is used to create or open a DBF file.</p>
 <h2>DBF SYNTAX:</h2>
 
 <ul>
-<li><strong>dbf</strong> <em>varname</em> -open <em>dbf-file</em> ?-readonly?
+<li><strong>dbf</strong> <em>varname</em> -open <em>dbf-file</em> ?-readonly? ?-notrim?
 </li></ul>
 
 <p>Opens dbase file and creates new tcl <strong>command</strong> to access file content.
+Optionally, prevent leading spaces from being truncated when reading character fields.
 New <strong>command</strong> name is assigned to the variable <em>varname</em>.
 Returns new <strong>command</strong> name.</p>
 
 <p>Compatibility mode: command returns 1 on success, 0 on failure.</p>
 
 <ul>
-<li><strong>dbf</strong> <em>varname</em> -create <em>dbf-file</em> ?-codepage <em>dbf-codepage</em>?
+<li><strong>dbf</strong> <em>varname</em> -create <em>dbf-file</em> ?-codepage <em>dbf-codepage</em>? ?-notrim?
 </li></ul>
 
 <p>Creates empty dbase file.
@@ -191,12 +192,13 @@ If the optional parameter is not specified, returns a list of all field descript
 <p>Compatibility mode: all returned values are strings.</p>
 
 <ul>
-<li><strong>command</strong> insert <em>rowid</em>|end <em>list</em>|?<em>value</em> ...?
+<li><strong>command</strong> insert <em>rowid</em>|end ?<em>value</em> ...?
 </li></ul>
 
 <p>Inserts the specified values into the given record</p>
 
-<p>Compatibility mode: relaxed error checking.</p>
+<p>Compatibility mode: relaxed error checking.
+Compatibility mode: values can be specified as a single list.</p>
 
 <ul>
 <li><strong>command</strong> update <em>rowid</em>|end ?<em>field</em> <em>value</em>? ?<em>field</em> <em>value</em> ...?
