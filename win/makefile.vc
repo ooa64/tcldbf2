@@ -71,13 +71,20 @@ $(ROOT)\manifest.uuid:
    git rev-parse HEAD >>$(ROOT)\manifest.uuid
 
 $(TMP_DIR)\tcldbfUuid.h:	$(ROOT)\manifest.uuid
-	copy $(WIN_DIR)\tcldbfUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tcldbfUuid.h
+	-@md $(TMP_DIR) 2> NUL
+	@copy $(WIN_DIR)\tcldbfUuid.h.in+$(ROOT)\manifest.uuid $(TMP_DIR)\tcldbfUuid.h
 
 # The default install target only installs binaries and scripts so add
 # an additional target for our documentation. Note this *adds* a target
 # since no commands are listed after it. The original targets for
 # install (from targets.vc) will remain.
-install: default-install-docs-html default-install-demos
+install: default-install-docs-html install-examples
+
+install-examples:
+	@echo Installing demos to '$(DEMO_INSTALL_DIR)'
+	@if not exist "$(DEMO_INSTALL_DIR)" mkdir "$(DEMO_INSTALL_DIR)"
+	@for %%f in (dbfinfo.tcl dbfexport.tcl dbfimport.tcl dbfedit.tcl dbfview.tcl dbfview-make-executable.tcl) do \
+		@($(CPY) ..\examples\%%f "$(DEMO_INSTALL_DIR)")
 
 # Explicit dependency rules
 
